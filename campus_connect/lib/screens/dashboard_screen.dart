@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/mock_data.dart'; // Still needed for the Department model and static announcements
+import '../models/mock_data.dart';
 import 'department_feed_screen.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  // This variable controls which tab is active
+  bool _isShowingDepartments = true;
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +54,7 @@ class DashboardScreen extends StatelessWidget {
           const Text('Explore',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
           const SizedBox(height: 20),
-          _buildDepartmentList(context),
+          _buildDynamicListSection(context), // Updated section
         ],
       ),
     );
@@ -61,7 +69,7 @@ class DashboardScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         image: const DecorationImage(
           image: NetworkImage(
-              'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?q=80&w=1200&auto=format&fit=crop'), // Used a reliable placeholder
+              'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?q=80&w=1200&auto=format&fit=crop'),
           fit: BoxFit.cover,
           opacity: 0.4,
         ),
@@ -101,10 +109,9 @@ class DashboardScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -133,97 +140,80 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  // --- THE NEW FIREBASE INTEGRATION ---
-  Widget _buildDepartmentList(BuildContext context) {
+  // --- THE UPDATED DYNAMIC LIST ---
+  Widget _buildDynamicListSection(BuildContext context) {
+    // Determines which collection to pull from based on the active tab
+    String currentCollection =
+        _isShowingDepartments ? 'departments' : 'organizations';
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200)),
       child: Column(
         children: [
+          // The Interactive Tab Bar
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 15),
             decoration: BoxDecoration(
                 border: Border(
                     bottom: BorderSide(color: Colors.grey.shade300, width: 2))),
-            child: const Row(
+            child: Row(
               children: [
-                Expanded(
-                    child: Center(
-                        child: Text('Departments',
-                            style: TextStyle(fontWeight: FontWeight.bold)))),
-                Expanded(
-                    child: Center(
-                        child: Text('Organizations',
-                            style: TextStyle(color: Colors.grey)))),
+                _buildTabButton('Departments', true),
+                _buildTabButton('Organizations', false),
               ],
             ),
           ),
 
-          // StreamBuilder listens to Firestore in real-time
+          // The Live Data Stream
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
-                .collection('departments')
+                .collection(currentCollection)
                 .orderBy('name')
                 .snapshots(),
             builder: (context, snapshot) {
-              // 1. Loading State
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Padding(
-                  padding: EdgeInsets.all(40.0),
-                  child: Center(
-                      child:
-                          CircularProgressIndicator(color: Color(0xFF002147))),
-                );
+                    padding: EdgeInsets.all(40.0),
+                    child: Center(
+                        child: CircularProgressIndicator(
+                            color: Color(0xFF002147))));
               }
 
-              // 2. Error State
               if (snapshot.hasError) {
+                return Padding(
+                    padding: const EdgeInsets.all(40.0),
+                    child: Center(child: Text('Error: ${snapshot.error}')));
+              }
+
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                 return Padding(
                   padding: const EdgeInsets.all(40.0),
                   child: Center(
-                      child:
-                          Text('Error loading departments: ${snapshot.error}')),
+                      child: Text(
+                          'No data found in the "$currentCollection" collection.',
+                          style: const TextStyle(color: Colors.grey))),
                 );
               }
 
-              // 3. Empty State (No documents in Firestore yet)
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.all(40.0),
-                  child: Center(
-                    child: Text(
-                      'No departments found.\nPlease add documents to the "departments" collection in Firebase.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ),
-                );
-              }
-
-              // 4. Data Loaded Successfully
-              final departments = snapshot.data!.docs;
+              final docs = snapshot.data!.docs;
 
               return ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: departments.length,
+                itemCount: docs.length,
                 separatorBuilder: (context, index) =>
                     Divider(color: Colors.grey.shade200, height: 1),
                 itemBuilder: (context, index) {
-                  // Extract data from the current Firestore document
-                  var doc = departments[index];
-                  var deptData = doc.data() as Map<String, dynamic>;
+                  var data = docs[index].data() as Map<String, dynamic>;
+                  String name = data['name'] ?? 'Unknown';
+                  String logoText = data['logo_text'] ?? 'UB';
+                  int newNotices = data['new_notices_count'] ?? 0;
 
-                  // Safely parse the fields, providing fallbacks if missing
-                  String name = deptData['name'] ?? 'Unknown Department';
-                  String logoText = deptData['logo_text'] ?? 'UB';
-                  int newNotices = deptData['new_notices_count'] ?? 0;
-
-                  // Convert the Firebase data into your existing Department model
-                  Department deptModel = Department(doc.id, name, newNotices);
+                  // We reuse the Department model since Organizations share the exact same structure
+                  Department model =
+                      Department(docs[index].id, name, newNotices);
 
                   return ListTile(
                     contentPadding: const EdgeInsets.symmetric(
@@ -235,7 +225,7 @@ class DashboardScreen extends StatelessWidget {
                               color: Colors.white, fontSize: 14)),
                     ),
                     title: Text(name,
-                        style: const TextStyle(fontWeight: FontWeight.w500)),
+                        style: const TextStyle(fontWeight: FontWeight.w600)),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -257,14 +247,11 @@ class DashboardScreen extends StatelessWidget {
                       ],
                     ),
                     onTap: () {
-                      // Navigate to Feed, passing the newly created model
                       Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              DepartmentFeedScreen(department: deptModel),
-                        ),
-                      );
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) =>
+                                  DepartmentFeedScreen(department: model)));
                     },
                   );
                 },
@@ -272,6 +259,41 @@ class DashboardScreen extends StatelessWidget {
             },
           ),
         ],
+      ),
+    );
+  }
+
+  // Helper widget to build the clickable tabs
+  Widget _buildTabButton(String title, bool isDepartmentTab) {
+    bool isActive = _isShowingDepartments == isDepartmentTab;
+
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _isShowingDepartments = isDepartmentTab;
+          });
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 15),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: isActive ? const Color(0xFF002147) : Colors.transparent,
+                width: 3,
+              ),
+            ),
+          ),
+          child: Center(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                color: isActive ? const Color(0xFF002147) : Colors.grey,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

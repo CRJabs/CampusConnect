@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../screens/dashboard_screen.dart';
 import '../screens/navigation_screen.dart';
 import '../screens/faq_screen.dart';
+import '../screens/login_screen.dart';
 
 class CampusLayout extends StatefulWidget {
   const CampusLayout({super.key});
@@ -38,27 +39,26 @@ class _CampusLayoutState extends State<CampusLayout> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: Color(0xFF002147),
-                child: Text('UB',
+          // Replace the old Row with this:
+          Image.asset(
+            'assets/logo.png', // You will put your actual PNG here later
+            height: 50,
+            errorBuilder: (context, error, stackTrace) {
+              // This grey box will show up until you add the actual 'logo.png' to your assets folder
+              return Container(
+                height: 50,
+                width: 250,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade400),
+                ),
+                alignment: Alignment.center,
+                child: const Text('Add assets/logo.png',
                     style: TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-              SizedBox(width: 15),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('CampusConnect',
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  Text('University of Bohol',
-                      style: TextStyle(fontSize: 14, color: Colors.grey)),
-                ],
-              ),
-            ],
+                        color: Colors.grey, fontWeight: FontWeight.bold)),
+              );
+            },
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -111,10 +111,17 @@ class _CampusLayoutState extends State<CampusLayout> {
     return Container(
       color: const Color(0xFF002147),
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 40),
-      child: const Text(
-        '© 2026 University of Bohol • CampusConnect\nSCHOLARSHIP • CHARACTER • SERVICE',
-        textAlign: TextAlign.center,
-        style: TextStyle(color: Colors.white70, fontSize: 12),
+      child: GestureDetector(
+        // SECRET ADMIN ENTRY: Double tap the footer text to open login
+        onDoubleTap: () {
+          Navigator.push(context,
+              MaterialPageRoute(builder: (context) => const LoginScreen()));
+        },
+        child: const Text(
+          '© 2026 University of Bohol • CampusConnect\nSCHOLARSHIP • CHARACTER • SERVICE',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white70, fontSize: 12),
+        ),
       ),
     );
   }
