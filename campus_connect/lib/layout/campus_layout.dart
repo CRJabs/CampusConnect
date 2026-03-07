@@ -34,7 +34,7 @@ class _CampusLayoutState extends State<CampusLayout> {
 
   Widget _buildTopNav() {
     return Container(
-      color: Colors.white,
+      color: const Color(0xFF002147),
       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

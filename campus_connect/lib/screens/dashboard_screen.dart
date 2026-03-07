@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:carousel_slider/carousel_slider.dart'; // New Import
 import '../models/mock_data.dart';
 import 'department_feed_screen.dart';
+import 'placeholder_detail_screen.dart'; // New Import
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -11,7 +13,9 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  // This variable controls which tab is active
+  // Primary State: Home vs Explore
+  bool _isHomeTabActive = true;
+  // Secondary State: Departments vs Organizations (for Explore tab)
   bool _isShowingDepartments = true;
 
   @override
@@ -21,92 +25,201 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeroBanner(),
-          const SizedBox(height: 40),
-          const Text('Latest Announcements',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          _buildMainTabToggle(),
           const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                  child: _buildInfoCard(
-                      'Enrollment',
-                      'Enrollment for S.Y. 2026-2027',
-                      'Online enrollment is now open. Secure your slot early!',
-                      Colors.red)),
-              const SizedBox(width: 20),
-              Expanded(
-                  child: _buildInfoCard(
-                      'Event',
-                      'UB Foundation Week',
-                      'Join us for a week of activities celebrating 80 years of excellence.',
-                      Colors.orange)),
-              const SizedBox(width: 20),
-              Expanded(
-                  child: _buildInfoCard(
-                      'Announcement',
-                      'New Library Hours',
-                      'The library will now be open from 7AM to 9PM on weekdays.',
-                      const Color(0xFF002147))),
-            ],
-          ),
-          const SizedBox(height: 40),
-          const Text('Explore',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 20),
-          _buildDynamicListSection(context), // Updated section
+
+          // Conditional Rendering based on the Primary Tab
+          if (_isHomeTabActive) ...[
+            _buildHeroCarousel(),
+            const SizedBox(height: 40),
+            const Text('Latest Announcements',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            _buildLatestAnnouncementsSection(),
+            const SizedBox(height: 40),
+            const Text('Recent Posts',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            _buildHomeFeed(),
+          ] else ...[
+            const Text('Explore Directory',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            _buildDynamicListSection(context),
+          ]
         ],
       ),
     );
   }
 
-  Widget _buildHeroBanner() {
-    return Container(
-      height: 300,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: const Color(0xFF002147),
-        borderRadius: BorderRadius.circular(16),
-        image: const DecorationImage(
-          image: NetworkImage(
-              'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?q=80&w=1200&auto=format&fit=crop'),
-          fit: BoxFit.cover,
-          opacity: 0.4,
+  // --- 1. THE MAIN TOGGLE PILL ---
+  Widget _buildMainTabToggle() {
+    return Center(
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(30),
+        ),
+        padding: const EdgeInsets.all(4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _mainTabButton('Home', _isHomeTabActive,
+                () => setState(() => _isHomeTabActive = true)),
+            _mainTabButton('Explore', !_isHomeTabActive,
+                () => setState(() => _isHomeTabActive = false)),
+          ],
         ),
       ),
-      padding: const EdgeInsets.all(40),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          const Text('Graduation Ceremony 2026',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
-          const Text(
-              'Congratulations to the Class of 2026! Join us on March 28.',
-              style: TextStyle(color: Colors.white, fontSize: 18)),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFFC107),
-              foregroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            ),
-            onPressed: () {},
-            child: const Text('View Details →',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+    );
+  }
+
+  Widget _mainTabButton(String title, bool isActive, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(25),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFF002147) : Colors.transparent,
+          borderRadius: BorderRadius.circular(25),
+        ),
+        child: Text(
+          title,
+          style: TextStyle(
+            color: isActive ? Colors.white : Colors.black87,
+            fontSize: 12,
+            fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
           ),
-        ],
+        ),
       ),
+    );
+  }
+
+  // --- 2. INDEFINITE CAROUSEL ---
+  Widget _buildHeroCarousel() {
+    final List<Map<String, String>> carouselItems = [
+      {
+        'title': 'UB Days 2026 is Here!',
+        'desc':
+            'Visit the Official Medal Tally website here to see your department\'s standings!',
+        'img':
+            'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=1200'
+      },
+      {
+        'title': 'University of Bohol\'s 80th Charter Day',
+        'desc':
+            'Join us in celebrating eight decades of Scholarship, Character, and Service.',
+        'img':
+            'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=1200'
+      },
+      {
+        'title': 'Student Services Satisfaction Survey',
+        'desc': 'Help us serve you better by taking this quick survey.',
+        'img':
+            'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=1200'
+      },
+    ];
+
+    return CarouselSlider(
+      options: CarouselOptions(
+        height: 350.0,
+        autoPlay: true,
+        autoPlayInterval: const Duration(seconds: 5),
+        enlargeCenterPage: true,
+        viewportFraction: 1.0, // Takes up full width of its container
+      ),
+      items: carouselItems.map((item) {
+        return Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: const Color(0xFF002147),
+            borderRadius: BorderRadius.circular(16),
+            image: DecorationImage(
+              image: NetworkImage(item['img']!),
+              fit: BoxFit.cover,
+              colorFilter: ColorFilter.mode(
+                  Colors.black.withOpacity(0.5), BlendMode.darken),
+            ),
+          ),
+          padding: const EdgeInsets.all(40),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Text(item['title']!,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              Text(item['desc']!,
+                  style: const TextStyle(color: Colors.white, fontSize: 18)),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFFC107),
+                  foregroundColor: Colors.black,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => PlaceholderDetailScreen(
+                              title: item['title']!,
+                              source: 'Featured Banner')));
+                },
+                child: const Text('View Details →',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  // --- 3. THE 4 MAJOR SOURCES ---
+  Widget _buildLatestAnnouncementsSection() {
+    return Row(
+      children: [
+        Expanded(
+            child: _buildInfoCard(
+                'University of Bohol',
+                'Campus Wide Advisory',
+                'Important update regarding campus entry protocols.',
+                Colors.red)),
+        const SizedBox(width: 15),
+        Expanded(
+            child: _buildInfoCard(
+                'UB SPS',
+                'Clearance Requirements',
+                '1st Semester clearance guidelines are now available.',
+                Colors.blue)),
+        const SizedBox(width: 15),
+        Expanded(
+            child: _buildInfoCard(
+                'UB NSSG',
+                'Student Assembly',
+                'Join the mandatory supreme student government assembly.',
+                Colors.green)),
+        const SizedBox(width: 15),
+        Expanded(
+            child: _buildInfoCard(
+                'UB CSO',
+                'Accreditation Deadline',
+                'Final call for campus student organizations accreditation.',
+                Colors.orange)),
+      ],
     );
   }
 
   Widget _buildInfoCard(
-      String badgeText, String title, String desc, Color badgeColor) {
+      String source, String title, String desc, Color badgeColor) {
     return Container(
+      height: 230, // STRICT UNIFORM HEIGHT
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
           color: Colors.white,
@@ -119,30 +232,105 @@ class _DashboardScreenState extends State<DashboardScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
                 color: badgeColor, borderRadius: BorderRadius.circular(20)),
-            child: Text(badgeText,
-                style: const TextStyle(color: Colors.white, fontSize: 12)),
+            child: Text(source,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold)),
           ),
           const SizedBox(height: 15),
+          // Added maxLines to titles to prevent overflow if text gets too long
           Text(title,
-              style:
-                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis),
           const SizedBox(height: 8),
           Text(desc,
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
-          const SizedBox(height: 15),
-          const Text('Read More →',
-              style: TextStyle(
-                  color: Colors.red,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14)),
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis),
+
+          const Spacer(), // This pushes the "Read More" link strictly to the bottom edge
+
+          InkWell(
+            onTap: () {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => PlaceholderDetailScreen(
+                          title: title, source: source)));
+            },
+            child: const Text('Read More →',
+                style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14)),
+          ),
         ],
       ),
     );
   }
 
-  // --- THE UPDATED DYNAMIC LIST ---
+  // --- 4. ENDLESS HOME FEED (PLACEHOLDERS) ---
+  Widget _buildHomeFeed() {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics:
+          const NeverScrollableScrollPhysics(), // Let the main SingleChildScrollView handle scrolling
+      itemCount: 5, // Show 5 placeholder posts for now
+      itemBuilder: (context, index) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 20),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade200)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                      backgroundColor: const Color(0xFF002147),
+                      child: Text('D${index + 1}',
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 12))),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Department Placeholder ${index + 1}',
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                      const Text('2 hours ago',
+                          style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 15),
+              const Text(
+                  'This is a placeholder for a general feed post. Once connected, this will show a unified stream of updates from all departments and organizations.'),
+              const SizedBox(height: 10),
+              InkWell(
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const PlaceholderDetailScreen(
+                            title: 'General Feed Post', source: 'Department'))),
+                child: const Text('See More ∨',
+                    style: TextStyle(
+                        color: Colors.red, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // --- 5. THE EXPLORE DIRECTORY (EXISTING FIREBASE LOGIC) ---
   Widget _buildDynamicListSection(BuildContext context) {
-    // Determines which collection to pull from based on the active tab
     String currentCollection =
         _isShowingDepartments ? 'departments' : 'organizations';
 
@@ -153,20 +341,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
           border: Border.all(color: Colors.grey.shade200)),
       child: Column(
         children: [
-          // The Interactive Tab Bar
           Container(
             decoration: BoxDecoration(
                 border: Border(
                     bottom: BorderSide(color: Colors.grey.shade300, width: 2))),
             child: Row(
               children: [
-                _buildTabButton('Departments', true),
-                _buildTabButton('Organizations', false),
+                _buildExploreTabButton('Departments', true),
+                _buildExploreTabButton('Organizations', false),
               ],
             ),
           ),
-
-          // The Live Data Stream
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection(currentCollection)
@@ -180,23 +365,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: CircularProgressIndicator(
                             color: Color(0xFF002147))));
               }
-
               if (snapshot.hasError) {
                 return Padding(
                     padding: const EdgeInsets.all(40.0),
                     child: Center(child: Text('Error: ${snapshot.error}')));
               }
-
               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                 return Padding(
-                  padding: const EdgeInsets.all(40.0),
-                  child: Center(
-                      child: Text(
-                          'No data found in the "$currentCollection" collection.',
-                          style: const TextStyle(color: Colors.grey))),
-                );
+                    padding: const EdgeInsets.all(40.0),
+                    child: Center(
+                        child: Text('No data found in "$currentCollection".',
+                            style: const TextStyle(color: Colors.grey))));
               }
-
               final docs = snapshot.data!.docs;
 
               return ListView.separated(
@@ -211,7 +391,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   String logoText = data['logo_text'] ?? 'UB';
                   int newNotices = data['new_notices_count'] ?? 0;
 
-                  // We reuse the Department model since Organizations share the exact same structure
                   Department model =
                       Department(docs[index].id, name, newNotices);
 
@@ -219,11 +398,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 20, vertical: 10),
                     leading: CircleAvatar(
-                      backgroundColor: const Color(0xFF002147),
-                      child: Text(logoText,
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 14)),
-                    ),
+                        backgroundColor: const Color(0xFF002147),
+                        child: Text(logoText,
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 14))),
                     title: Text(name,
                         style: const TextStyle(fontWeight: FontWeight.w600)),
                     trailing: Row(
@@ -246,13 +424,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         const Icon(Icons.chevron_right, color: Colors.grey),
                       ],
                     ),
-                    onTap: () {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) =>
-                                  DepartmentFeedScreen(department: model)));
-                    },
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                DepartmentFeedScreen(department: model))),
                   );
                 },
               );
@@ -263,36 +439,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // Helper widget to build the clickable tabs
-  Widget _buildTabButton(String title, bool isDepartmentTab) {
+  Widget _buildExploreTabButton(String title, bool isDepartmentTab) {
     bool isActive = _isShowingDepartments == isDepartmentTab;
-
     return Expanded(
       child: InkWell(
-        onTap: () {
-          setState(() {
-            _isShowingDepartments = isDepartmentTab;
-          });
-        },
+        onTap: () => setState(() => _isShowingDepartments = isDepartmentTab),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 15),
           decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: isActive ? const Color(0xFF002147) : Colors.transparent,
-                width: 3,
-              ),
-            ),
-          ),
+              border: Border(
+                  bottom: BorderSide(
+                      color: isActive
+                          ? const Color(0xFF002147)
+                          : Colors.transparent,
+                      width: 3))),
           child: Center(
-            child: Text(
-              title,
-              style: TextStyle(
-                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                color: isActive ? const Color(0xFF002147) : Colors.grey,
-              ),
-            ),
-          ),
+              child: Text(title,
+                  style: TextStyle(
+                      fontWeight:
+                          isActive ? FontWeight.bold : FontWeight.normal,
+                      color:
+                          isActive ? const Color(0xFF002147) : Colors.grey))),
         ),
       ),
     );
