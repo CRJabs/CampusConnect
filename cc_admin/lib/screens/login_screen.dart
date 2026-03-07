@@ -56,6 +56,9 @@ class _LoginScreenState extends State<LoginScreen> {
       } else if (role == 'organization') {
         Navigator.pushReplacement(context,
             MaterialPageRoute(builder: (context) => const ProfilePage()));
+      } else if (role == 'department') {
+        Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (context) => const ProfilePage()));
       } else {
         _showError('Unknown role assigned to this account.');
         await FirebaseAuth.instance.signOut();
