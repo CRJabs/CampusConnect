@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:carousel_slider/carousel_slider.dart'; // New Import
-import '../models/mock_data.dart';
+import 'package:carousel_slider/carousel_slider.dart';
 import 'department_feed_screen.dart';
-import 'placeholder_detail_screen.dart'; // New Import
+import 'post_detail_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -13,9 +12,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  // Primary State: Home vs Explore
   bool _isHomeTabActive = true;
-  // Secondary State: Departments vs Organizations (for Explore tab)
   bool _isShowingDepartments = true;
 
   @override
@@ -27,20 +24,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           _buildMainTabToggle(),
           const SizedBox(height: 20),
-
-          // Conditional Rendering based on the Primary Tab
           if (_isHomeTabActive) ...[
             _buildHeroCarousel(),
             const SizedBox(height: 40),
-            const Text('Latest Announcements',
+            const Text('Featured Announcements',
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
             _buildLatestAnnouncementsSection(),
             const SizedBox(height: 40),
-            const Text('Recent Posts',
+            const Text('Live Global Feed',
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
-            _buildHomeFeed(),
+            _buildGlobalLiveFeed(),
           ] else ...[
             const Text('Explore Directory',
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
@@ -52,14 +47,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // --- 1. THE MAIN TOGGLE PILL ---
   Widget _buildMainTabToggle() {
     return Center(
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(30),
-        ),
+            color: Colors.grey.shade200,
+            borderRadius: BorderRadius.circular(30)),
         padding: const EdgeInsets.all(4),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -81,22 +74,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 8),
         decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF002147) : Colors.transparent,
-          borderRadius: BorderRadius.circular(25),
-        ),
-        child: Text(
-          title,
-          style: TextStyle(
-            color: isActive ? Colors.white : Colors.black87,
-            fontSize: 12,
-            fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-          ),
-        ),
+            color: isActive ? const Color(0xFF002147) : Colors.transparent,
+            borderRadius: BorderRadius.circular(25)),
+        child: Text(title,
+            style: TextStyle(
+                color: isActive ? Colors.white : Colors.black87,
+                fontSize: 12,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.w500)),
       ),
     );
   }
 
-  // --- 2. INDEFINITE CAROUSEL ---
   Widget _buildHeroCarousel() {
     final List<Map<String, String>> carouselItems = [
       {
@@ -123,12 +111,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return CarouselSlider(
       options: CarouselOptions(
-        height: 350.0,
-        autoPlay: true,
-        autoPlayInterval: const Duration(seconds: 5),
-        enlargeCenterPage: true,
-        viewportFraction: 1.0, // Takes up full width of its container
-      ),
+          height: 350.0,
+          autoPlay: true,
+          autoPlayInterval: const Duration(seconds: 5),
+          enlargeCenterPage: true,
+          viewportFraction: 1.0),
       items: carouselItems.map((item) {
         return Container(
           width: double.infinity,
@@ -136,11 +123,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             color: const Color(0xFF002147),
             borderRadius: BorderRadius.circular(16),
             image: DecorationImage(
-              image: NetworkImage(item['img']!),
-              fit: BoxFit.cover,
-              colorFilter: ColorFilter.mode(
-                  Colors.black.withOpacity(0.5), BlendMode.darken),
-            ),
+                image: NetworkImage(item['img']!),
+                fit: BoxFit.cover,
+                colorFilter: ColorFilter.mode(
+                    Colors.black.withOpacity(0.5), BlendMode.darken)),
           ),
           padding: const EdgeInsets.all(40),
           child: Column(
@@ -158,18 +144,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 20),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFC107),
-                  foregroundColor: Colors.black,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                ),
+                    backgroundColor: const Color(0xFFFFC107),
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 16)),
                 onPressed: () {
                   Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (context) => PlaceholderDetailScreen(
+                          builder: (context) => PostDetailScreen(
                               title: item['title']!,
-                              source: 'Featured Banner')));
+                              desc: item['desc']!,
+                              orgName: 'Featured Banner',
+                              timeText: 'Pinned')));
                 },
                 child: const Text('View Details →',
                     style: TextStyle(fontWeight: FontWeight.bold)),
@@ -181,7 +168,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // --- 3. THE 4 MAJOR SOURCES ---
   Widget _buildLatestAnnouncementsSection() {
     return Row(
       children: [
@@ -219,7 +205,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildInfoCard(
       String source, String title, String desc, Color badgeColor) {
     return Container(
-      height: 230, // STRICT UNIFORM HEIGHT
+      height: 230,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
           color: Colors.white,
@@ -239,7 +225,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     fontWeight: FontWeight.bold)),
           ),
           const SizedBox(height: 15),
-          // Added maxLines to titles to prevent overflow if text gets too long
           Text(title,
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               maxLines: 2,
@@ -249,16 +234,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
               style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
               maxLines: 2,
               overflow: TextOverflow.ellipsis),
-
-          const Spacer(), // This pushes the "Read More" link strictly to the bottom edge
-
+          const Spacer(),
           InkWell(
             onTap: () {
               Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => PlaceholderDetailScreen(
-                          title: title, source: source)));
+                      builder: (context) => PostDetailScreen(
+                          title: title,
+                          desc: desc,
+                          orgName: source,
+                          timeText: 'Featured')));
             },
             child: const Text('Read More →',
                 style: TextStyle(
@@ -271,65 +257,168 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // --- 4. ENDLESS HOME FEED (PLACEHOLDERS) ---
-  Widget _buildHomeFeed() {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics:
-          const NeverScrollableScrollPhysics(), // Let the main SingleChildScrollView handle scrolling
-      itemCount: 5, // Show 5 placeholder posts for now
-      itemBuilder: (context, index) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: 20),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.shade200)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                      backgroundColor: const Color(0xFF002147),
-                      child: Text('D${index + 1}',
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 12))),
-                  const SizedBox(width: 10),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Department Placeholder ${index + 1}',
-                          style: const TextStyle(fontWeight: FontWeight.bold)),
-                      const Text('2 hours ago',
-                          style: TextStyle(color: Colors.grey, fontSize: 12)),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 15),
-              const Text(
-                  'This is a placeholder for a general feed post. Once connected, this will show a unified stream of updates from all departments and organizations.'),
-              const SizedBox(height: 10),
-              InkWell(
-                onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const PlaceholderDetailScreen(
-                            title: 'General Feed Post', source: 'Department'))),
-                child: const Text('See More ∨',
-                    style: TextStyle(
-                        color: Colors.red, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
+  Widget _buildGlobalLiveFeed() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('organization_notices')
+          .orderBy('timestamp', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+              child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: CircularProgressIndicator()));
+        }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(
+              child: Text("No general announcements at this time.",
+                  style: TextStyle(color: Colors.grey)));
+        }
+
+        final posts = snapshot.data!.docs;
+
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: posts.length,
+          itemBuilder: (context, index) {
+            var postData = posts[index].data() as Map<String, dynamic>;
+            String orgId = postData['org_id'] ?? '';
+            String title = postData['title'] ?? 'No Title';
+            String desc = postData['description'] ?? '';
+            String? imageUrl = postData['image_url'];
+
+            String timeText = 'Recently';
+            if (postData['timestamp'] != null) {
+              DateTime date = (postData['timestamp'] as Timestamp).toDate();
+              timeText = "${date.month}/${date.day}/${date.year}";
+            }
+
+            return FutureBuilder<DocumentSnapshot>(
+                future: FirebaseFirestore.instance
+                    .collection('organizations')
+                    .doc(orgId)
+                    .get(),
+                builder: (context, orgSnapshot) {
+                  String orgName = "Campus Organization";
+                  String? profileUrl;
+                  String logoText = "UB";
+
+                  if (orgSnapshot.hasData && orgSnapshot.data!.exists) {
+                    var orgData =
+                        orgSnapshot.data!.data() as Map<String, dynamic>;
+                    orgName = orgData['name'] ?? orgName;
+                    profileUrl = orgData['profile_image_url'];
+                    logoText = orgData['logo_text'] ?? 'UB';
+                  } else {
+                    FirebaseFirestore.instance
+                        .collection('departments')
+                        .doc(orgId)
+                        .get()
+                        .then((depDoc) {
+                      if (depDoc.exists && mounted) {
+                        // Safe state update logic if needed
+                      }
+                    });
+                  }
+
+                  return Card(
+                    color: Colors.white,
+                    surfaceTintColor: Colors.transparent,
+                    elevation: 0,
+                    margin: const EdgeInsets.only(bottom: 20),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: Colors.grey.shade200)),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => PostDetailScreen(
+                                  title: title,
+                                  desc: desc,
+                                  imageUrl: imageUrl,
+                                  orgName: orgName,
+                                  timeText: timeText))),
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: const BoxDecoration(
+                                      color: Color(0xFF002147),
+                                      shape: BoxShape.circle),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: (profileUrl != null &&
+                                          profileUrl.isNotEmpty)
+                                      ? Image.network(profileUrl,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (c, e, s) => Center(
+                                              child: Text(
+                                                  logoText.substring(0, 1),
+                                                  style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 14))))
+                                      : Center(
+                                          child: Text(logoText.substring(0, 1),
+                                              style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 14))),
+                                ),
+                                const SizedBox(width: 10),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(orgName,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold)),
+                                    Text(timeText,
+                                        style: const TextStyle(
+                                            color: Colors.grey, fontSize: 12)),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 15),
+                            Text(title,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 16)),
+                            const SizedBox(height: 5),
+                            Text(desc,
+                                style:
+                                    const TextStyle(fontSize: 15, height: 1.5),
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis),
+                            if (imageUrl != null && imageUrl.isNotEmpty) ...[
+                              const SizedBox(height: 15),
+                              ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(imageUrl,
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                      height: 400,
+                                      errorBuilder: (c, e, s) =>
+                                          const SizedBox())),
+                            ]
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                });
+          },
         );
       },
     );
   }
 
-  // --- 5. THE EXPLORE DIRECTORY (EXISTING FIREBASE LOGIC) ---
   Widget _buildDynamicListSection(BuildContext context) {
     String currentCollection =
         _isShowingDepartments ? 'departments' : 'organizations';
@@ -377,6 +466,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: Text('No data found in "$currentCollection".',
                             style: const TextStyle(color: Colors.grey))));
               }
+
               final docs = snapshot.data!.docs;
 
               return ListView.separated(
@@ -390,9 +480,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   String name = data['name'] ?? 'Unknown';
                   String logoText = data['logo_text'] ?? 'UB';
                   int newNotices = data['new_notices_count'] ?? 0;
-
-                  Department model =
-                      Department(docs[index].id, name, newNotices);
 
                   return ListTile(
                     contentPadding: const EdgeInsets.symmetric(
@@ -427,8 +514,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) =>
-                                DepartmentFeedScreen(department: model))),
+                            builder: (context) => DepartmentFeedScreen(
+                                orgId: docs[index].id,
+                                collectionPath: currentCollection))),
                   );
                 },
               );

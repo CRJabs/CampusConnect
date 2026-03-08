@@ -14,7 +14,52 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+
   bool _isLoading = false;
+  // NEW: State variable to hold the screen while we check for an active session
+  bool _isCheckingSession = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkExistingSession();
+  }
+
+  // --- NEW: Session Logic ---
+  Future<void> _checkExistingSession() async {
+    // A tiny delay ensures Firebase Web has time to read from the browser's local storage
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    User? user = FirebaseAuth.instance.currentUser;
+
+    if (user != null) {
+      try {
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (userDoc.exists && mounted) {
+          String role = userDoc.get('role');
+
+          if (role == 'admin') {
+            Navigator.pushReplacement(context,
+                MaterialPageRoute(builder: (context) => const AdminPage()));
+            return; // Stop execution here so we don't show the login screen
+          } else if (role == 'organization' || role == 'department') {
+            Navigator.pushReplacement(context,
+                MaterialPageRoute(builder: (context) => const ProfilePage()));
+            return;
+          }
+        }
+      } catch (e) {
+        // If there's an error checking the session, we silently fail and just let them log in manually.
+      }
+    }
+
+    // If no user is found, stop checking and show the login form
+    if (mounted) setState(() => _isCheckingSession = false);
+  }
 
   Future<void> _processLogin() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
@@ -45,6 +90,17 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
+      // --- NEW: RECORD LOGIN HISTORY ---
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('login_history')
+          .add({
+        'timestamp': FieldValue.serverTimestamp(),
+        'device': 'Web Portal', // Can be expanded later
+      });
+      // ---------------------------------
+
       String role = userDoc.get('role');
 
       // 3. Route based on role
@@ -53,10 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (role == 'admin') {
         Navigator.pushReplacement(context,
             MaterialPageRoute(builder: (context) => const AdminPage()));
-      } else if (role == 'organization') {
-        Navigator.pushReplacement(context,
-            MaterialPageRoute(builder: (context) => const ProfilePage()));
-      } else if (role == 'department') {
+      } else if (role == 'organization' || role == 'department') {
         Navigator.pushReplacement(context,
             MaterialPageRoute(builder: (context) => const ProfilePage()));
       } else {
@@ -83,8 +136,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // NEW: Show a loading spinner while checking for an existing session
+    if (_isCheckingSession) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFF8F9FA),
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFF002147)),
+        ),
+      );
+    }
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: const Color(0xFF002147),
       body: Center(
         child: SingleChildScrollView(
           child: Container(
@@ -102,28 +165,34 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircleAvatar(
-                  radius: 45,
-                  backgroundColor: Color(0xFF002147),
-                  child: Icon(Icons.shield, color: Colors.white, size: 40),
+                // --- NEW: Logo Image Implementation ---
+                // Try to load the image. If it fails (or URL is empty), fallback to the shield and text.
+                Image.network(
+                  '../assets/loginLogo.png', // Replace with your actual Logo Web Link!
+                  height:
+                      280, // Adjust this height based on the proportions of your logo
+                  errorBuilder: (context, error, stackTrace) => const Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 45,
+                        backgroundColor: Color(0xFF002147),
+                        child:
+                            Icon(Icons.shield, color: Colors.white, size: 40),
+                      ),
+                      SizedBox(height: 25),
+                      Text('CampusConnect Portal',
+                          style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF002147))),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 25),
-                const Text('CampusConnect Portal',
-                    style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF002147))),
-                const SizedBox(height: 10),
-                const Text(
-                    'Log in to manage your campus profile and announcements.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey, height: 1.5)),
-                const SizedBox(height: 40),
+
                 TextField(
                   controller: _emailController,
                   decoration: InputDecoration(
-                    labelText: 'Institutional Email',
-                    hintText: 'e.g., admin@ubohol.edu.ph',
+                    labelText: 'Email Address',
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8)),
                     prefixIcon: const Icon(Icons.email_outlined),
@@ -131,6 +200,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 20),
+
                 TextField(
                   controller: _passwordController,
                   decoration: InputDecoration(
@@ -142,6 +212,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   obscureText: true,
                 ),
                 const SizedBox(height: 40),
+
                 SizedBox(
                   width: double.infinity,
                   height: 55,
@@ -159,7 +230,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             width: 24,
                             child: CircularProgressIndicator(
                                 color: Colors.white, strokeWidth: 2))
-                        : const Text('Secure Log In',
+                        : const Text('Log In',
                             style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,

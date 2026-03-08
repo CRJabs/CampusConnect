@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../screens/dashboard_screen.dart';
 import '../screens/navigation_screen.dart';
 import '../screens/faq_screen.dart';
-import '../screens/login_screen.dart';
 
 class CampusLayout extends StatefulWidget {
   const CampusLayout({super.key});
@@ -39,12 +38,10 @@ class _CampusLayoutState extends State<CampusLayout> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Replace the old Row with this:
           Image.asset(
-            'assets/logo.png', // You will put your actual PNG here later
+            'assets/logo.png',
             height: 50,
             errorBuilder: (context, error, stackTrace) {
-              // This grey box will show up until you add the actual 'logo.png' to your assets folder
               return Container(
                 height: 50,
                 width: 250,
@@ -111,17 +108,10 @@ class _CampusLayoutState extends State<CampusLayout> {
     return Container(
       color: const Color(0xFF002147),
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 40),
-      child: GestureDetector(
-        // SECRET ADMIN ENTRY: Double tap the footer text to open login
-        onDoubleTap: () {
-          Navigator.push(context,
-              MaterialPageRoute(builder: (context) => const LoginScreen()));
-        },
-        child: const Text(
-          '© 2026 University of Bohol • CampusConnect\nSCHOLARSHIP • CHARACTER • SERVICE',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white70, fontSize: 12),
-        ),
+      child: const Text(
+        '© 2026 University of Bohol • CampusConnect\nSCHOLARSHIP • CHARACTER • SERVICE',
+        textAlign: TextAlign.center,
+        style: TextStyle(color: Colors.white70, fontSize: 12),
       ),
     );
   }

@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'dart:typed_data';
 import 'login_screen.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -99,131 +95,14 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildImageSelector(
-      String title,
-      Uint8List? selectedBytes,
-      String? selectedName,
-      String? currentUrl,
-      String logoTextFallback,
-      Function(Uint8List?, String?) onSelected) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        const SizedBox(height: 10),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(15),
-          decoration: BoxDecoration(
-            border: Border.all(
-                color: Colors.grey.shade400, style: BorderStyle.solid),
-            borderRadius: BorderRadius.circular(8),
-            color: Colors.grey.shade50,
-          ),
-          child: Row(
-            children: [
-              if (selectedBytes != null) ...[
-                ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.memory(selectedBytes,
-                        width: 60, height: 60, fit: BoxFit.cover)),
-              ] else if (currentUrl != null && currentUrl.isNotEmpty) ...[
-                ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(currentUrl,
-                        width: 60,
-                        height: 60,
-                        fit: BoxFit.cover,
-                        errorBuilder: (c, e, s) => CircleAvatar(
-                            radius: 30,
-                            backgroundColor: Colors.grey,
-                            child: Text(logoTextFallback)))),
-              ] else ...[
-                CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Colors.grey.shade200,
-                    child: const Icon(Icons.image, color: Colors.grey)),
-              ],
-              const SizedBox(width: 15),
-              Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    if (selectedBytes != null && selectedName != null) ...[
-                      Text(selectedName,
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.green),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
-                      const SizedBox(width: 5),
-                      TextButton(
-                          onPressed: () => onSelected(null, null),
-                          child: const Text('Remove New',
-                              style:
-                                  TextStyle(color: Colors.red, fontSize: 12))),
-                    ] else ...[
-                      OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.black,
-                            side: const BorderSide(color: Colors.grey),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
-                            visualDensity: VisualDensity.compact),
-                        onPressed: () async {
-                          final ImagePicker picker = ImagePicker();
-                          final XFile? image = await picker.pickImage(
-                              source: ImageSource.gallery);
-                          if (image != null) {
-                            final bytes = await image.readAsBytes();
-                            onSelected(bytes, image.name);
-                          }
-                        },
-                        icon: const Icon(Icons.folder, size: 16),
-                        label: const Text('Browse',
-                            style: TextStyle(fontSize: 12)),
-                      ),
-                    ]
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<String?> _uploadSingleToImgBB(Uint8List? bytes, String? name) async {
-    if (bytes == null) return null;
-
-    // TODO: REPLACE THIS WITH YOUR ACTUAL IMGBB API KEY!
-    const String imgbbApiKey = '8e7a9ca00e35e5bf1b1914b1ec501570';
-    var request = http.MultipartRequest(
-        'POST', Uri.parse('https://api.imgbb.com/1/upload?key=$imgbbApiKey'));
-    request.files.add(http.MultipartFile.fromBytes('image', bytes,
-        filename: name ?? 'upload.png'));
-    var response = await request.send();
-    var responseData = await response.stream.bytesToString();
-    var jsonResponse = json.decode(responseData);
-
-    if (jsonResponse['success'] == true) {
-      return jsonResponse['data']['url'];
-    } else {
-      throw Exception('Failed to upload image to ImgBB server.');
-    }
-  }
-
+  // --- REVERTED: Now uses text fields for URLs instead of file pickers ---
   void _showEditProfileDialog(String currentName, String currentBio,
       String currentLogo, String? currentHeaderUrl, String? currentProfileUrl) {
     final nameCtrl = TextEditingController(text: currentName);
     final bioCtrl = TextEditingController(text: currentBio);
     final logoCtrl = TextEditingController(text: currentLogo);
-
-    Uint8List? selectedProfileBytes;
-    String? selectedProfileName;
-    Uint8List? selectedHeaderBytes;
-    String? selectedHeaderName;
+    final profileUrlCtrl = TextEditingController(text: currentProfileUrl ?? '');
+    final headerUrlCtrl = TextEditingController(text: currentHeaderUrl ?? '');
 
     final formKey = GlobalKey<FormState>();
     bool isSaving = false;
@@ -255,7 +134,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Identity',
+                        const Text('Information Details',
                             style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
@@ -272,7 +151,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         TextFormField(
                             controller: logoCtrl,
                             decoration: const InputDecoration(
-                                labelText: 'Fallback Initials (e.g., NSSG)',
+                                labelText: 'Acronym',
                                 border: OutlineInputBorder()),
                             maxLength: 4),
                         const SizedBox(height: 15),
@@ -286,27 +165,27 @@ class _ProfilePageState extends State<ProfilePage> {
                         const SizedBox(height: 25),
                         const Divider(),
                         const SizedBox(height: 15),
-                        _buildImageSelector(
-                            'Profile Photo',
-                            selectedProfileBytes,
-                            selectedProfileName,
-                            currentProfileUrl,
-                            currentLogo,
-                            (bytes, name) => setDialogState(() {
-                                  selectedProfileBytes = bytes;
-                                  selectedProfileName = name;
-                                })),
-                        const SizedBox(height: 20),
-                        _buildImageSelector(
-                            'Header Image',
-                            selectedHeaderBytes,
-                            selectedHeaderName,
-                            currentHeaderUrl,
-                            'Header',
-                            (bytes, name) => setDialogState(() {
-                                  selectedHeaderBytes = bytes;
-                                  selectedHeaderName = name;
-                                })),
+                        const Text('Profile / Header Images',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Color(0xFF002147))),
+                        const SizedBox(height: 15),
+                        TextFormField(
+                          controller: profileUrlCtrl,
+                          decoration: const InputDecoration(
+                              labelText: 'Profile Photo URL (Web Link)',
+                              border: OutlineInputBorder(),
+                              hintText: 'https://example.com/logo.png'),
+                        ),
+                        const SizedBox(height: 15),
+                        TextFormField(
+                          controller: headerUrlCtrl,
+                          decoration: const InputDecoration(
+                              labelText: 'Header Image URL (Web Link)',
+                              border: OutlineInputBorder(),
+                              hintText: 'https://example.com/banner.png'),
+                        ),
                       ],
                     ),
                   ),
@@ -328,17 +207,6 @@ class _ProfilePageState extends State<ProfilePage> {
                             if (formKey.currentState!.validate()) {
                               setDialogState(() => isSaving = true);
                               try {
-                                String? finalProfileUrl = currentProfileUrl;
-                                String? finalHeaderUrl = currentHeaderUrl;
-
-                                if (selectedProfileBytes != null)
-                                  finalProfileUrl = await _uploadSingleToImgBB(
-                                      selectedProfileBytes,
-                                      selectedProfileName);
-                                if (selectedHeaderBytes != null)
-                                  finalHeaderUrl = await _uploadSingleToImgBB(
-                                      selectedHeaderBytes, selectedHeaderName);
-
                                 await FirebaseFirestore.instance
                                     .collection(_targetCollection!)
                                     .doc(_targetId)
@@ -346,8 +214,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                   'name': nameCtrl.text.trim(),
                                   'bio': bioCtrl.text.trim(),
                                   'logo_text': logoCtrl.text.trim(),
-                                  'profile_image_url': finalProfileUrl ?? '',
-                                  'header_image_url': finalHeaderUrl ?? '',
+                                  'profile_image_url':
+                                      profileUrlCtrl.text.trim(),
+                                  'header_image_url': headerUrlCtrl.text.trim(),
                                 });
 
                                 if (!dialogContext.mounted) return;
@@ -367,7 +236,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             height: 20,
                             child: CircularProgressIndicator(
                                 color: Colors.white, strokeWidth: 2))
-                        : const Text('Save All Changes',
+                        : const Text('Save Changes',
                             style: TextStyle(
                                 fontWeight: FontWeight.bold, fontSize: 16)),
                   ),
@@ -378,11 +247,12 @@ class _ProfilePageState extends State<ProfilePage> {
         });
   }
 
+  // --- REVERTED: Now uses text field for Image URL instead of file picker ---
   void _showCreatePostDialog() {
     final titleCtrl = TextEditingController();
     final descCtrl = TextEditingController();
-    Uint8List? selectedImageBytes;
-    String? selectedImageName;
+    final imageUrlCtrl = TextEditingController();
+
     final formKey = GlobalKey<FormState>();
     bool isPosting = false;
 
@@ -421,66 +291,13 @@ class _ProfilePageState extends State<ProfilePage> {
                             validator: (value) => value!.isEmpty
                                 ? 'Description is required'
                                 : null),
-                        const SizedBox(height: 25),
-                        const Text('Attach Image (Optional)',
-                            style: TextStyle(fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 10),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(15),
-                          decoration: BoxDecoration(
-                              border: Border.all(
-                                  color: Colors.grey.shade400,
-                                  style: BorderStyle.solid),
-                              borderRadius: BorderRadius.circular(8),
-                              color: Colors.grey.shade50),
-                          child: Column(
-                            children: [
-                              if (selectedImageName != null &&
-                                  selectedImageBytes != null) ...[
-                                const Icon(Icons.image,
-                                    color: Colors.green, size: 40),
-                                const SizedBox(height: 10),
-                                Text(selectedImageName ?? 'Attached Image',
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.bold),
-                                    textAlign: TextAlign.center),
-                                TextButton(
-                                    onPressed: () => setDialogState(() {
-                                          selectedImageBytes = null;
-                                          selectedImageName = null;
-                                        }),
-                                    child: const Text('Remove',
-                                        style: TextStyle(color: Colors.red))),
-                              ] else ...[
-                                const Icon(Icons.cloud_upload,
-                                    color: Colors.grey, size: 40),
-                                const SizedBox(height: 10),
-                                ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.white,
-                                      foregroundColor: Colors.black,
-                                      elevation: 0,
-                                      side:
-                                          const BorderSide(color: Colors.grey)),
-                                  onPressed: () async {
-                                    final ImagePicker picker = ImagePicker();
-                                    final XFile? image = await picker.pickImage(
-                                        source: ImageSource.gallery);
-                                    if (image != null) {
-                                      final bytes = await image.readAsBytes();
-                                      setDialogState(() {
-                                        selectedImageBytes = bytes;
-                                        selectedImageName = image.name;
-                                      });
-                                    }
-                                  },
-                                  icon: const Icon(Icons.folder),
-                                  label: const Text('Browse Files'),
-                                ),
-                              ]
-                            ],
-                          ),
+                        const SizedBox(height: 15),
+                        TextFormField(
+                          controller: imageUrlCtrl,
+                          decoration: const InputDecoration(
+                              labelText: 'Attach Image URL (Optional)',
+                              border: OutlineInputBorder(),
+                              hintText: 'https://example.com/poster.jpg'),
                         ),
                       ],
                     ),
@@ -503,19 +320,13 @@ class _ProfilePageState extends State<ProfilePage> {
                           if (formKey.currentState!.validate()) {
                             setDialogState(() => isPosting = true);
                             try {
-                              String? finalImageUrl;
-                              if (selectedImageBytes != null) {
-                                finalImageUrl = await _uploadSingleToImgBB(
-                                    selectedImageBytes, selectedImageName);
-                              }
-
                               await FirebaseFirestore.instance
                                   .collection('organization_notices')
                                   .add({
                                 'org_id': _targetId,
                                 'title': titleCtrl.text.trim(),
                                 'description': descCtrl.text.trim(),
-                                'image_url': finalImageUrl ?? '',
+                                'image_url': imageUrlCtrl.text.trim(),
                                 'timestamp': FieldValue.serverTimestamp(),
                               });
                               await FirebaseFirestore.instance
@@ -618,11 +429,13 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isInitializing)
+    if (_isInitializing) {
       return const Scaffold(
           body: Center(
               child: CircularProgressIndicator(color: Color(0xFF002147))));
-    if (_errorMessage.isNotEmpty)
+    }
+
+    if (_errorMessage.isNotEmpty) {
       return Scaffold(
           appBar: AppBar(
               title: const Text('Error'),
@@ -631,22 +444,20 @@ class _ProfilePageState extends State<ProfilePage> {
           body: Center(
               child: Text(_errorMessage,
                   style: const TextStyle(color: Colors.red))));
-
+    }
     return Scaffold(
       backgroundColor: const Color(0xFFF0F2F5),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF002147), foregroundColor: Colors.white,
-
-        // --- THIS IS THE FIX: Swapping text for the CampusConnect Logo ---
+        toolbarHeight: 80,
+        backgroundColor: const Color(0xFF002147),
+        foregroundColor: Colors.white,
         title: Image.network(
-          'assets/logo.png',
-          height: 35, // Setting a clean, standard height for AppBar logos
+          '../assets/logo.png',
+          height: 45,
           errorBuilder: (context, error, stackTrace) => const Text(
-              'Organization Workspace',
-              style: TextStyle(
-                  fontWeight: FontWeight.bold)), // Text fallback if ImgBB delay
+              'CampusConnect',
+              style: TextStyle(fontWeight: FontWeight.bold)),
         ),
-
         actions: [
           TextButton.icon(
               onPressed: () => _logout(context),
@@ -662,11 +473,14 @@ class _ProfilePageState extends State<ProfilePage> {
             .doc(_targetId!)
             .snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting)
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
-          if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists)
+          }
+          if (snapshot.hasError ||
+              !snapshot.hasData ||
+              !snapshot.data!.exists) {
             return const Center(child: Text('Error loading profile data.'));
-
+          }
           var data = snapshot.data!.data() as Map<String, dynamic>;
           String orgName = data['name'] ?? 'Unnamed Organization';
           String logoText = data['logo_text'] ?? 'UB';
@@ -678,7 +492,7 @@ class _ProfilePageState extends State<ProfilePage> {
           return Center(
             child: SingleChildScrollView(
               child: Container(
-                width: 1200,
+                width: 1600,
                 margin:
                     const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
                 decoration: BoxDecoration(
@@ -716,7 +530,7 @@ class _ProfilePageState extends State<ProfilePage> {
       clipBehavior: Clip.none,
       children: [
         Container(
-          height: 250,
+          height: 500,
           width: double.infinity,
           decoration: const BoxDecoration(
             borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
@@ -738,7 +552,7 @@ class _ProfilePageState extends State<ProfilePage> {
         Positioned(
           bottom: -50,
           left: 40,
-          child: _buildStandardAvatar(profileImageUrl, logoText, 120, 32,
+          child: _buildStandardAvatar(profileImageUrl, logoText, 240, 64,
               hasBorder: true),
         ),
       ],
@@ -798,7 +612,7 @@ class _ProfilePageState extends State<ProfilePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Publish an Announcement',
+          const Text('Publish post',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 15),
           Row(
