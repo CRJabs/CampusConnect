@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'login_screen.dart';
 
 class AdminPage extends StatefulWidget {
@@ -22,20 +25,19 @@ class _AdminPageState extends State<AdminPage> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3, // Accounts, Directory, Settings
+      length: 4,
       child: Scaffold(
         backgroundColor: const Color(0xFFF0F2F5),
         appBar: AppBar(
           toolbarHeight: 100,
-          backgroundColor: const Color(0xFF002147), // Dark Navy Background
+          backgroundColor: const Color(0xFF002147),
           elevation: 0,
           automaticallyImplyLeading: false,
-
           title: Row(
             children: [
               const SizedBox(width: 20),
               Image.network(
-                '../assets/logo.png', // White Logo
+                'https://raw.githubusercontent.com/username/repo/branch/CampusConnect_White_Logo.png',
                 height: 40,
                 errorBuilder: (context, error, stackTrace) => const Text(
                     'CampusConnect Admin',
@@ -44,9 +46,7 @@ class _AdminPageState extends State<AdminPage> {
               ),
             ],
           ),
-
           actions: [
-            // Super Admin Badge
             Center(
               child: Container(
                 padding:
@@ -65,8 +65,6 @@ class _AdminPageState extends State<AdminPage> {
                 ]),
               ),
             ),
-
-            // The Pill Tabs Container
             Center(
               child: Container(
                 height: 50,
@@ -77,19 +75,15 @@ class _AdminPageState extends State<AdminPage> {
                 ),
                 child: TabBar(
                   isScrollable: true,
-                  // --- THIS IS THE FIX: Removes the default Material 3 52px gap! ---
                   tabAlignment: TabAlignment.start,
                   padding: EdgeInsets.zero,
-                  // ----------------------------------------------------------------
                   dividerColor: Colors.transparent,
                   indicator: BoxDecoration(
-                    color: const Color(
-                        0xFF002147), // Navy background for active pill
+                    color: const Color(0xFF002147),
                     borderRadius: BorderRadius.circular(25),
                   ),
-                  labelColor: Colors.white, // White text when active
-                  unselectedLabelColor:
-                      Colors.black87, // Dark text when inactive
+                  labelColor: Colors.white,
+                  unselectedLabelColor: Colors.black87,
                   labelPadding: const EdgeInsets.symmetric(horizontal: 20),
                   indicatorSize: TabBarIndicatorSize.tab,
                   tabs: const [
@@ -111,6 +105,14 @@ class _AdminPageState extends State<AdminPage> {
                     ])),
                     Tab(
                         child: Row(children: [
+                      Icon(Icons.star, size: 16),
+                      SizedBox(width: 8),
+                      Text('Highlights',
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.bold))
+                    ])),
+                    Tab(
+                        child: Row(children: [
                       Icon(Icons.build_circle, size: 16),
                       SizedBox(width: 8),
                       Text('Settings',
@@ -121,10 +123,7 @@ class _AdminPageState extends State<AdminPage> {
                 ),
               ),
             ),
-
             const SizedBox(width: 30),
-
-            // Logout Button (White text on Navy)
             TextButton.icon(
                 style: TextButton.styleFrom(
                     foregroundColor: Colors.white,
@@ -133,7 +132,6 @@ class _AdminPageState extends State<AdminPage> {
                 icon: const Icon(Icons.logout),
                 label: const Text('Logout',
                     style: TextStyle(fontWeight: FontWeight.bold))),
-
             const SizedBox(width: 20),
           ],
         ),
@@ -152,6 +150,7 @@ class _AdminPageState extends State<AdminPage> {
               children: [
                 _buildAccountsTab(),
                 _buildDirectoryTab(),
+                _buildHighlightsTab(),
                 _buildFutureTab(),
               ],
             ),
@@ -318,6 +317,9 @@ class _AdminPageState extends State<AdminPage> {
                               value: 'admin',
                               child: Text('Super Admin (Full Access)')),
                           DropdownMenuItem(
+                              value: 'administration',
+                              child: Text('Administration Editor')),
+                          DropdownMenuItem(
                               value: 'department',
                               child: Text('Department Editor')),
                           DropdownMenuItem(
@@ -330,13 +332,14 @@ class _AdminPageState extends State<AdminPage> {
                         }),
                       ),
                       const SizedBox(height: 15),
-                      if (selectedRole == 'department' ||
-                          selectedRole == 'organization')
+                      if (selectedRole != 'admin')
                         StreamBuilder<QuerySnapshot>(
                           stream: FirebaseFirestore.instance
                               .collection(selectedRole == 'department'
                                   ? 'departments'
-                                  : 'organizations')
+                                  : selectedRole == 'organization'
+                                      ? 'organizations'
+                                      : 'administrations')
                               .orderBy('name')
                               .snapshots(),
                           builder: (context, snapshot) {
@@ -372,8 +375,7 @@ class _AdminPageState extends State<AdminPage> {
                       : () async {
                           if (emailCtrl.text.isEmpty || passCtrl.text.isEmpty)
                             return;
-                          if ((selectedRole == 'department' ||
-                                  selectedRole == 'organization') &&
+                          if (selectedRole != 'admin' &&
                               selectedTargetId == null) {
                             ScaffoldMessenger.of(dialogContext).showSnackBar(
                                 const SnackBar(
@@ -403,7 +405,9 @@ class _AdminPageState extends State<AdminPage> {
                                 'target_collection':
                                     selectedRole == 'department'
                                         ? 'departments'
-                                        : 'organizations',
+                                        : selectedRole == 'organization'
+                                            ? 'organizations'
+                                            : 'administrations',
                             });
                             await tempApp.delete();
                             if (!dialogContext.mounted) return;
@@ -595,15 +599,12 @@ class _AdminPageState extends State<AdminPage> {
   }
 
   // ==========================================
-  // TAB 2: DEPARTMENTS & ORGS MANAGEMENT
+  // TAB 2: DIRECTORY MANAGEMENT
   // ==========================================
-  bool _isShowingDepartments = true;
+  String _activeDirectoryTab = 'administrations';
 
   Widget _buildDirectoryTab() {
     return StatefulBuilder(builder: (context, setTabState) {
-      String currentCollection =
-          _isShowingDepartments ? 'departments' : 'organizations';
-
       return Padding(
         padding: const EdgeInsets.all(40),
         child: Column(
@@ -622,10 +623,10 @@ class _AdminPageState extends State<AdminPage> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 20, vertical: 20)),
                   onPressed: () =>
-                      _showAddEntityDialog(context, currentCollection),
+                      _showAddEntityDialog(context, _activeDirectoryTab),
                   icon: const Icon(Icons.add_business),
                   label: Text(
-                      'Add New ${_isShowingDepartments ? 'Department' : 'Organization'}',
+                      'Add New ${_activeDirectoryTab == 'departments' ? 'Department' : _activeDirectoryTab == 'organizations' ? 'Organization' : 'Administration'}',
                       style: const TextStyle(fontWeight: FontWeight.bold)),
                 )
               ],
@@ -638,50 +639,12 @@ class _AdminPageState extends State<AdminPage> {
                           BorderSide(color: Colors.grey.shade300, width: 2))),
               child: Row(
                 children: [
-                  Expanded(
-                      child: InkWell(
-                          onTap: () =>
-                              setTabState(() => _isShowingDepartments = true),
-                          child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 15),
-                              decoration: BoxDecoration(
-                                  border: Border(
-                                      bottom: BorderSide(
-                                          color: _isShowingDepartments
-                                              ? const Color(0xFF002147)
-                                              : Colors.transparent,
-                                          width: 3))),
-                              child: Center(
-                                  child: Text('Academic Departments',
-                                      style: TextStyle(
-                                          fontWeight: _isShowingDepartments
-                                              ? FontWeight.bold
-                                              : FontWeight.normal,
-                                          color: _isShowingDepartments
-                                              ? const Color(0xFF002147)
-                                              : Colors.grey)))))),
-                  Expanded(
-                      child: InkWell(
-                          onTap: () =>
-                              setTabState(() => _isShowingDepartments = false),
-                          child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 15),
-                              decoration: BoxDecoration(
-                                  border: Border(
-                                      bottom: BorderSide(
-                                          color: !_isShowingDepartments
-                                              ? const Color(0xFF002147)
-                                              : Colors.transparent,
-                                          width: 3))),
-                              child: Center(
-                                  child: Text('Student Organizations',
-                                      style: TextStyle(
-                                          fontWeight: !_isShowingDepartments
-                                              ? FontWeight.bold
-                                              : FontWeight.normal,
-                                          color: !_isShowingDepartments
-                                              ? const Color(0xFF002147)
-                                              : Colors.grey)))))),
+                  _buildDirectoryTabButton(
+                      'Administration', 'administrations', setTabState),
+                  _buildDirectoryTabButton(
+                      'Academic Departments', 'departments', setTabState),
+                  _buildDirectoryTabButton(
+                      'Student Organizations', 'organizations', setTabState),
                 ],
               ),
             ),
@@ -689,7 +652,7 @@ class _AdminPageState extends State<AdminPage> {
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                   stream: FirebaseFirestore.instance
-                      .collection(currentCollection)
+                      .collection(_activeDirectoryTab)
                       .orderBy('name')
                       .snapshots(),
                   builder: (context, snapshot) {
@@ -697,7 +660,7 @@ class _AdminPageState extends State<AdminPage> {
                       return const Center(child: CircularProgressIndicator());
                     if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
                       return Center(
-                          child: Text('No $currentCollection found.'));
+                          child: Text('No $_activeDirectoryTab found.'));
                     return ListView.builder(
                       itemCount: snapshot.data!.docs.length,
                       itemBuilder: (context, index) {
@@ -728,18 +691,20 @@ class _AdminPageState extends State<AdminPage> {
                                   ? Image.network(profileUrl,
                                       fit: BoxFit.cover,
                                       errorBuilder: (c, e, s) => Center(
-                                          child: Text(logoText,
+                                          child:
+                                              Text(logoText.length > 4 ? logoText.substring(0, 4) : logoText,
+                                                  style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.bold))))
+                                  : Center(
+                                      child:
+                                          Text(logoText.length > 4 ? logoText.substring(0, 4) : logoText,
                                               style: const TextStyle(
                                                   color: Colors.white,
                                                   fontSize: 12,
-                                                  fontWeight:
-                                                      FontWeight.bold))))
-                                  : Center(
-                                      child: Text(logoText,
-                                          style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.bold))),
+                                                  fontWeight: FontWeight.bold))),
                             ),
                             title: Text(data['name'] ?? 'Unnamed',
                                 style: const TextStyle(
@@ -753,7 +718,7 @@ class _AdminPageState extends State<AdminPage> {
                                 TextButton.icon(
                                     onPressed: () => _showEditEntityDialog(
                                         context,
-                                        currentCollection,
+                                        _activeDirectoryTab,
                                         doc.id,
                                         data),
                                     icon: const Icon(Icons.edit, size: 18),
@@ -764,7 +729,7 @@ class _AdminPageState extends State<AdminPage> {
                                         foregroundColor: Colors.red),
                                     onPressed: () {
                                       FirebaseFirestore.instance
-                                          .collection(currentCollection)
+                                          .collection(_activeDirectoryTab)
                                           .doc(doc.id)
                                           .delete();
                                     },
@@ -782,6 +747,33 @@ class _AdminPageState extends State<AdminPage> {
         ),
       );
     });
+  }
+
+  Widget _buildDirectoryTabButton(
+      String title, String targetCollection, StateSetter setTabState) {
+    bool isActive = _activeDirectoryTab == targetCollection;
+    return Expanded(
+      child: InkWell(
+        onTap: () => setTabState(() => _activeDirectoryTab = targetCollection),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 15),
+          decoration: BoxDecoration(
+              border: Border(
+                  bottom: BorderSide(
+                      color: isActive
+                          ? const Color(0xFF002147)
+                          : Colors.transparent,
+                      width: 3))),
+          child: Center(
+              child: Text(title,
+                  style: TextStyle(
+                      fontWeight:
+                          isActive ? FontWeight.bold : FontWeight.normal,
+                      color:
+                          isActive ? const Color(0xFF002147) : Colors.grey))),
+        ),
+      ),
+    );
   }
 
   void _showAddEntityDialog(BuildContext context, String collection) {
@@ -900,8 +892,654 @@ class _AdminPageState extends State<AdminPage> {
   }
 
   // ==========================================
-  // TAB 3: CONSTRUCTION
+  // TAB 3: HIGHLIGHTS & FEATURED MANAGEMENT (UPGRADED)
   // ==========================================
+  Widget _buildHighlightsTab() {
+    // FIX: Using SingleChildScrollView so both lists can coexist and scroll
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(40),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // --- PART 1: CAROUSEL HIGHLIGHTS ---
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Featured Highlights (Carousel)',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF002147),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 20)),
+                onPressed: () => _showEditHighlightDialog(null, null),
+                icon: const Icon(Icons.add_to_photos),
+                label: const Text('Add New Highlight',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+              )
+            ],
+          ),
+          const SizedBox(height: 20),
+          const Divider(),
+          const SizedBox(height: 20),
+
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('highlights')
+                .orderBy('timestamp', descending: true)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting)
+                return const Center(child: CircularProgressIndicator());
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
+                return const Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Text(
+                        'No highlights found. They will fallback to default if empty.'));
+
+              return ListView.builder(
+                shrinkWrap:
+                    true, // Prevents infinite height error inside Column
+                physics:
+                    const NeverScrollableScrollPhysics(), // Disables inner scrolling
+                itemCount: snapshot.data!.docs.length,
+                itemBuilder: (context, index) {
+                  var doc = snapshot.data!.docs[index];
+                  var data = doc.data() as Map<String, dynamic>;
+
+                  return Card(
+                    color: Colors.white,
+                    surfaceTintColor: Colors.transparent,
+                    elevation: 0,
+                    margin: const EdgeInsets.only(bottom: 15),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: Colors.grey.shade200)),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 10),
+                      leading: Container(
+                        width: 80,
+                        height: 45,
+                        decoration: BoxDecoration(
+                            color: Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(4)),
+                        clipBehavior: Clip.antiAlias,
+                        child: data['carousel_image_url'] != null
+                            ? Image.network(data['carousel_image_url'],
+                                fit: BoxFit.cover,
+                                errorBuilder: (c, e, s) =>
+                                    const Icon(Icons.image))
+                            : const Icon(Icons.image, color: Colors.grey),
+                      ),
+                      title: Text(data['carousel_title'] ?? 'No Title',
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text(data['carousel_desc'] ?? '',
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TextButton.icon(
+                              onPressed: () =>
+                                  _showEditHighlightDialog(doc.id, data),
+                              icon: const Icon(Icons.edit, size: 18),
+                              label: const Text('Edit Details')),
+                          const SizedBox(width: 10),
+                          TextButton.icon(
+                              style: TextButton.styleFrom(
+                                  foregroundColor: Colors.red),
+                              onPressed: () => FirebaseFirestore.instance
+                                  .collection('highlights')
+                                  .doc(doc.id)
+                                  .delete(),
+                              icon: const Icon(Icons.delete, size: 18),
+                              label: const Text('Delete')),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+
+          const SizedBox(height: 60),
+
+          // --- PART 2: THE 6 FEATURED ACCOUNT SLOTS ---
+          const Text('Featured Announcements (Dashboard Cards)',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          const Text(
+              'Select exactly 6 accounts. The system will automatically display their single most recent post on the Dashboard.',
+              style: TextStyle(color: Colors.grey, fontSize: 14)),
+          const SizedBox(height: 20),
+          const Divider(),
+          const SizedBox(height: 20),
+
+          // We build exactly 6 cards corresponding to doc IDs slot_1 through slot_6
+          ...List.generate(6, (index) {
+            String slotId = 'slot_${index + 1}';
+            return StreamBuilder<DocumentSnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('featured_sources')
+                    .doc(slotId)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting)
+                    return const SizedBox(
+                        height: 70,
+                        child: Center(child: LinearProgressIndicator()));
+
+                  bool isConfigured = snapshot.hasData && snapshot.data!.exists;
+                  var data = isConfigured
+                      ? snapshot.data!.data() as Map<String, dynamic>
+                      : null;
+
+                  String orgName = data?['org_name'] ?? 'Empty Slot';
+                  String collection = data?['collection'] ?? 'None';
+                  int badgeColorInt =
+                      data?['badge_color'] ?? 0xFF9E9E9E; // Default grey
+
+                  return Card(
+                    color: Colors.white,
+                    surfaceTintColor: Colors.transparent,
+                    elevation: 0,
+                    margin: const EdgeInsets.only(bottom: 15),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(
+                            color: Colors.grey.shade300,
+                            width: isConfigured ? 1 : 1.5,
+                            style: isConfigured
+                                ? BorderStyle.solid
+                                : BorderStyle.none)),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 10),
+                      leading: CircleAvatar(
+                        backgroundColor: Color(badgeColorInt),
+                        child: Text('${index + 1}',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold)),
+                      ),
+                      title: Text(orgName,
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color:
+                                  isConfigured ? Colors.black : Colors.grey)),
+                      subtitle: isConfigured
+                          ? Text('Pulls from: $collection',
+                              style: const TextStyle(color: Colors.grey))
+                          : const Text(
+                              'Click configure to assign an account to this dashboard slot.'),
+                      trailing: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFF0F2F5),
+                              foregroundColor: const Color(0xFF002147),
+                              elevation: 0),
+                          onPressed: () =>
+                              _showConfigureSlotDialog(slotId, data),
+                          icon: const Icon(Icons.settings, size: 18),
+                          label: const Text('Configure Slot')),
+                    ),
+                  );
+                });
+          }),
+        ],
+      ),
+    );
+  }
+
+  void _showConfigureSlotDialog(
+      String slotId, Map<String, dynamic>? currentData) {
+    String selectedCollection = currentData?['collection'] ?? 'departments';
+    String? selectedOrgId = currentData?['org_id'];
+    String? selectedOrgName = currentData?['org_name'];
+    int selectedColor =
+        currentData?['badge_color'] ?? 0xFFF44336; // Default Red
+
+    // Predefined vibrant badge colors
+    final List<int> badgeColors = [
+      0xFFF44336, // Red
+      0xFF2196F3, // Blue
+      0xFF4CAF50, // Green
+      0xFFFF9800, // Orange
+      0xFF9C27B0, // Purple
+      0xFF009688, // Teal
+    ];
+
+    bool isSaving = false;
+
+    showDialog(
+        context: context,
+        builder: (dialogContext) {
+          return StatefulBuilder(builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              title: Text('Configure $slotId',
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              content: SizedBox(
+                width: 400,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('1. Select Account Type',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 10),
+                    DropdownButtonFormField<String>(
+                      value: selectedCollection,
+                      decoration:
+                          const InputDecoration(border: OutlineInputBorder()),
+                      items: const [
+                        DropdownMenuItem(
+                            value: 'administrations',
+                            child: Text('Administrations')),
+                        DropdownMenuItem(
+                            value: 'departments',
+                            child: Text('Academic Departments')),
+                        DropdownMenuItem(
+                            value: 'organizations',
+                            child: Text('Student Organizations')),
+                      ],
+                      onChanged: (val) {
+                        setDialogState(() {
+                          selectedCollection = val!;
+                          selectedOrgId =
+                              null; // Reset entity when collection changes
+                          selectedOrgName = null;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    const Text('2. Select Specific Account',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 10),
+                    StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection(selectedCollection)
+                          .orderBy('name')
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData)
+                          return const LinearProgressIndicator();
+
+                        // Validate that the selectedOrgId still exists in this stream
+                        bool idExists = snapshot.data!.docs
+                            .any((doc) => doc.id == selectedOrgId);
+                        if (!idExists) {
+                          selectedOrgId = null;
+                          selectedOrgName = null;
+                        }
+
+                        return DropdownButtonFormField<String>(
+                          value: selectedOrgId,
+                          decoration: const InputDecoration(
+                              border: OutlineInputBorder(),
+                              hintText: 'Choose account...'),
+                          items: snapshot.data!.docs
+                              .map((doc) => DropdownMenuItem(
+                                  value: doc.id, child: Text(doc['name'])))
+                              .toList(),
+                          onChanged: (val) {
+                            setDialogState(() {
+                              selectedOrgId = val;
+                              // Save the name too so the Dashboard doesn't have to do extra reads!
+                              selectedOrgName = snapshot.data!.docs
+                                  .firstWhere((doc) => doc.id == val)['name'];
+                            });
+                          },
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    const Text('3. Select Dashboard Badge Color',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 10,
+                      children: badgeColors.map((colorInt) {
+                        bool isSelected = selectedColor == colorInt;
+                        return InkWell(
+                          onTap: () =>
+                              setDialogState(() => selectedColor = colorInt),
+                          child: CircleAvatar(
+                            backgroundColor: Color(colorInt),
+                            radius: 18,
+                            child: isSelected
+                                ? const Icon(Icons.check,
+                                    color: Colors.white, size: 20)
+                                : null,
+                          ),
+                        );
+                      }).toList(),
+                    )
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: const Text('Cancel',
+                        style: TextStyle(color: Colors.grey))),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF002147),
+                      foregroundColor: Colors.white),
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          if (selectedOrgId == null || selectedOrgName == null)
+                            return;
+                          setDialogState(() => isSaving = true);
+
+                          await FirebaseFirestore.instance
+                              .collection('featured_sources')
+                              .doc(slotId)
+                              .set({
+                            'org_id': selectedOrgId,
+                            'org_name': selectedOrgName,
+                            'collection': selectedCollection,
+                            'badge_color': selectedColor,
+                          });
+
+                          if (!dialogContext.mounted) return;
+                          Navigator.pop(dialogContext);
+                        },
+                  child: isSaving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(color: Colors.white))
+                      : const Text('Save Slot'),
+                )
+              ],
+            );
+          });
+        });
+  }
+
+  void _showEditHighlightDialog(String? docId, Map<String, dynamic>? data) {
+    final carouselTitleCtrl =
+        TextEditingController(text: data?['carousel_title']);
+    final carouselDescCtrl =
+        TextEditingController(text: data?['carousel_desc']);
+    final postTitleCtrl = TextEditingController(text: data?['post_title']);
+    final postDescCtrl = TextEditingController(text: data?['post_desc']);
+
+    String? finalCarouselImageUrl = data?['carousel_image_url'];
+    String? finalPostImageUrl = data?['post_image_url'];
+
+    bool isSaving = false;
+
+    showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          return StatefulBuilder(builder: (context, setDialogState) {
+            bool isUploadingCarousel = false;
+            bool isUploadingPost = false;
+
+            Future<void> handleImageUpload(bool isCarousel) async {
+              final ImagePicker picker = ImagePicker();
+              final XFile? image = await picker.pickImage(
+                  source: ImageSource.gallery, imageQuality: 85);
+              if (image == null) return;
+
+              setDialogState(() {
+                if (isCarousel)
+                  isUploadingCarousel = true;
+                else
+                  isUploadingPost = true;
+              });
+
+              try {
+                String prefix = isCarousel ? 'carousel' : 'post';
+                String storagePath =
+                    'highlights/${prefix}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+                final storageRef =
+                    FirebaseStorage.instance.ref().child(storagePath);
+
+                if (kIsWeb) {
+                  final imgData = await image.readAsBytes();
+                  await storageRef.putData(
+                      imgData, SettableMetadata(contentType: 'image/jpeg'));
+                }
+
+                String downloadUrl = await storageRef.getDownloadURL();
+
+                setDialogState(() {
+                  if (isCarousel)
+                    finalCarouselImageUrl = downloadUrl;
+                  else
+                    finalPostImageUrl = downloadUrl;
+                });
+              } catch (e) {
+                if (dialogContext.mounted) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      SnackBar(content: Text('Upload Error: $e')));
+                }
+              } finally {
+                setDialogState(() {
+                  if (isCarousel)
+                    isUploadingCarousel = false;
+                  else
+                    isUploadingPost = false;
+                });
+              }
+            }
+
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              title: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                        docId == null
+                            ? 'Create New Highlight'
+                            : 'Edit Highlight Details',
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: isSaving
+                            ? null
+                            : () => Navigator.pop(dialogContext))
+                  ]),
+              content: SizedBox(
+                width: 700,
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('1. Dashboard Carousel Display',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Color(0xFF002147))),
+                      const SizedBox(height: 10),
+                      const Text(
+                          'This is what users see scrolling on the main dashboard.',
+                          style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      const SizedBox(height: 15),
+                      TextField(
+                          controller: carouselTitleCtrl,
+                          decoration: const InputDecoration(
+                              labelText: 'Carousel Main Heading',
+                              border: OutlineInputBorder())),
+                      const SizedBox(height: 15),
+                      TextField(
+                          controller: carouselDescCtrl,
+                          decoration: const InputDecoration(
+                              labelText: 'Carousel Subheading',
+                              border: OutlineInputBorder())),
+                      const SizedBox(height: 15),
+                      Container(
+                          height: 150,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey.shade300)),
+                          clipBehavior: Clip.antiAlias,
+                          child: (finalCarouselImageUrl != null)
+                              ? Image.network(finalCarouselImageUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (c, e, s) => const Center(
+                                      child: Icon(Icons.broken_image)))
+                              : const Center(
+                                  child: Icon(Icons.image,
+                                      color: Colors.grey, size: 40))),
+                      const SizedBox(height: 10),
+                      Center(
+                          child: isUploadingCarousel
+                              ? const CircularProgressIndicator()
+                              : ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF002147),
+                                      foregroundColor: Colors.white),
+                                  onPressed: () => handleImageUpload(true),
+                                  icon: const Icon(Icons.add_photo_alternate,
+                                      size: 18),
+                                  label: const Text(
+                                      'Upload Carousel Banner (16:9)'))),
+                      const SizedBox(height: 30),
+                      const Divider(),
+                      const SizedBox(height: 30),
+                      const Text('2. Detailed Post View',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Color(0xFF002147))),
+                      const SizedBox(height: 10),
+                      const Text(
+                          'This is what opens when a user clicks "View Details".',
+                          style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      const SizedBox(height: 15),
+                      TextField(
+                          controller: postTitleCtrl,
+                          decoration: const InputDecoration(
+                              labelText: 'Detailed Post Heading',
+                              border: OutlineInputBorder())),
+                      const SizedBox(height: 15),
+                      TextField(
+                          controller: postDescCtrl,
+                          decoration: const InputDecoration(
+                              labelText: 'Full Description',
+                              border: OutlineInputBorder(),
+                              alignLabelWithHint: true),
+                          maxLines: 5),
+                      const SizedBox(height: 15),
+                      Container(
+                          height: 150,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey.shade300)),
+                          clipBehavior: Clip.antiAlias,
+                          child: (finalPostImageUrl != null)
+                              ? Image.network(finalPostImageUrl!,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (c, e, s) => const Center(
+                                      child: Icon(Icons.broken_image)))
+                              : const Center(
+                                  child: Icon(Icons.image,
+                                      color: Colors.grey, size: 40))),
+                      const SizedBox(height: 10),
+                      Center(
+                          child: isUploadingPost
+                              ? const CircularProgressIndicator()
+                              : ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF002147),
+                                      foregroundColor: Colors.white),
+                                  onPressed: () => handleImageUpload(false),
+                                  icon: const Icon(Icons.add_photo_alternate,
+                                      size: 18),
+                                  label: const Text(
+                                      'Upload Detailed Image (Optional)'))),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF002147),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8))),
+                        onPressed: isSaving ||
+                                isUploadingCarousel ||
+                                isUploadingPost
+                            ? null
+                            : () async {
+                                if (carouselTitleCtrl.text.isEmpty ||
+                                    carouselDescCtrl.text.isEmpty ||
+                                    postTitleCtrl.text.isEmpty ||
+                                    postDescCtrl.text.isEmpty ||
+                                    finalCarouselImageUrl == null) {
+                                  ScaffoldMessenger.of(dialogContext)
+                                      .showSnackBar(const SnackBar(
+                                          content: Text(
+                                              'Please fill out all required fields and ensure a Carousel Banner is uploaded.')));
+                                  return;
+                                }
+
+                                setDialogState(() => isSaving = true);
+                                try {
+                                  Map<String, dynamic> payload = {
+                                    'carousel_title':
+                                        carouselTitleCtrl.text.trim(),
+                                    'carousel_desc':
+                                        carouselDescCtrl.text.trim(),
+                                    'post_title': postTitleCtrl.text.trim(),
+                                    'post_desc': postDescCtrl.text.trim(),
+                                    'carousel_image_url': finalCarouselImageUrl,
+                                    'post_image_url': finalPostImageUrl,
+                                    'timestamp': FieldValue.serverTimestamp(),
+                                  };
+
+                                  if (docId == null) {
+                                    await FirebaseFirestore.instance
+                                        .collection('highlights')
+                                        .add(payload);
+                                  } else {
+                                    await FirebaseFirestore.instance
+                                        .collection('highlights')
+                                        .doc(docId)
+                                        .update(payload);
+                                  }
+
+                                  if (!dialogContext.mounted) return;
+                                  Navigator.pop(dialogContext);
+                                } catch (e) {
+                                  if (dialogContext.mounted) {
+                                    ScaffoldMessenger.of(dialogContext)
+                                        .showSnackBar(SnackBar(
+                                            content: Text('Save Error: $e')));
+                                  }
+                                  setDialogState(() => isSaving = false);
+                                }
+                              },
+                        child: isSaving
+                            ? const CircularProgressIndicator(
+                                color: Colors.white)
+                            : const Text('Publish Highlight',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16))))
+              ],
+            );
+          });
+        });
+  }
+
   Widget _buildFutureTab() {
     return const Center(
       child: Column(

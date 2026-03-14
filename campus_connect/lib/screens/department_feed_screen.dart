@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+// --- NEW IMPORT ---
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'post_detail_screen.dart';
 
 class DepartmentFeedScreen extends StatelessWidget {
@@ -27,6 +29,7 @@ class DepartmentFeedScreen extends StatelessWidget {
               fit: BoxFit.cover,
               width: double.infinity,
               height: double.infinity,
+              cacheWidth: (size * 2).toInt(),
               errorBuilder: (c, e, s) => Center(
                   child: Text(logoText,
                       style: TextStyle(
@@ -40,6 +43,116 @@ class DepartmentFeedScreen extends StatelessWidget {
                       fontSize: fontSize,
                       fontWeight: FontWeight.bold))),
     );
+  }
+
+  // --- NEW: Grid Layout Builder ---
+  Widget _buildPostImageFeedGrid(List<String> imageUrls) {
+    int imageCount = imageUrls.length;
+
+    ClipRRect gridImage(String url) => ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.network(url,
+            height: double.infinity,
+            width: double.infinity,
+            fit: BoxFit.cover,
+            cacheWidth: 500,
+            errorBuilder: (c, e, s) =>
+                const Center(child: Icon(Icons.broken_image))));
+
+    if (imageCount == 1) {
+      return AspectRatio(aspectRatio: 16 / 9, child: gridImage(imageUrls[0]));
+    } else if (imageCount == 2) {
+      return AspectRatio(
+          aspectRatio: 16 / 9,
+          child: StaggeredGrid.count(
+              crossAxisCount: 2,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              children: [
+                StaggeredGridTile.count(
+                    crossAxisCellCount: 1,
+                    mainAxisCellCount: 1,
+                    child: gridImage(imageUrls[0])),
+                StaggeredGridTile.count(
+                    crossAxisCellCount: 1,
+                    mainAxisCellCount: 1,
+                    child: gridImage(imageUrls[1]))
+              ]));
+    } else if (imageCount == 3) {
+      return AspectRatio(
+          aspectRatio: 16 / 9,
+          child: StaggeredGrid.count(
+              crossAxisCount: 3,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              children: [
+                StaggeredGridTile.count(
+                    crossAxisCellCount: 1,
+                    mainAxisCellCount: 1,
+                    child: gridImage(imageUrls[0])),
+                StaggeredGridTile.count(
+                    crossAxisCellCount: 1,
+                    mainAxisCellCount: 1,
+                    child: gridImage(imageUrls[1])),
+                StaggeredGridTile.count(
+                    crossAxisCellCount: 1,
+                    mainAxisCellCount: 1,
+                    child: gridImage(imageUrls[2]))
+              ]));
+    } else {
+      return AspectRatio(
+        aspectRatio: 16 / 9,
+        child: StaggeredGrid.count(
+          crossAxisCount: 4,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          children: [
+            StaggeredGridTile.count(
+                crossAxisCellCount: 2,
+                mainAxisCellCount: 2,
+                child: gridImage(imageUrls[0])),
+            StaggeredGridTile.count(
+                crossAxisCellCount: 2,
+                mainAxisCellCount: 1,
+                child: StaggeredGrid.count(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 8,
+                    crossAxisSpacing: 8,
+                    children: [
+                      StaggeredGridTile.count(
+                          crossAxisCellCount: 1,
+                          mainAxisCellCount: 1,
+                          child: gridImage(imageUrls[1])),
+                      StaggeredGridTile.count(
+                          crossAxisCellCount: 1,
+                          mainAxisCellCount: 1,
+                          child: gridImage(imageUrls[2]))
+                    ])),
+            StaggeredGridTile.count(
+                crossAxisCellCount: 2,
+                mainAxisCellCount: 1,
+                child: Stack(
+                  children: [
+                    gridImage(imageUrls[3]),
+                    if (imageCount > 4) ...[
+                      Positioned.fill(
+                          child: Container(
+                              decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.5),
+                                  borderRadius: BorderRadius.circular(8)),
+                              child: Center(
+                                  child: Text('+${imageCount - 3}',
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 32,
+                                          fontWeight: FontWeight.bold))))),
+                    ]
+                  ],
+                )),
+          ],
+        ),
+      );
+    }
   }
 
   @override
@@ -58,13 +171,11 @@ class DepartmentFeedScreen extends StatelessWidget {
             .doc(orgId)
             .snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (snapshot.connectionState == ConnectionState.waiting)
             return const Center(
                 child: CircularProgressIndicator(color: Color(0xFF002147)));
-          }
-          if (!snapshot.hasData || !snapshot.data!.exists) {
+          if (!snapshot.hasData || !snapshot.data!.exists)
             return const Center(child: Text('Profile not found.'));
-          }
 
           var data = snapshot.data!.data() as Map<String, dynamic>;
           String orgName = data['name'] ?? 'Unnamed Organization';
@@ -160,30 +271,44 @@ class DepartmentFeedScreen extends StatelessWidget {
                                 .snapshots(),
                             builder: (context, postSnapshot) {
                               if (postSnapshot.connectionState ==
-                                  ConnectionState.waiting) {
+                                  ConnectionState.waiting)
                                 return const Center(
                                     child: Padding(
                                         padding: EdgeInsets.all(20),
                                         child: CircularProgressIndicator()));
-                              }
                               if (!postSnapshot.hasData ||
-                                  postSnapshot.data!.docs.isEmpty) {
+                                  postSnapshot.data!.docs.isEmpty)
                                 return Container(
                                     padding: const EdgeInsets.all(40),
                                     alignment: Alignment.center,
                                     child: const Text(
                                         "No announcements published yet.",
                                         style: TextStyle(color: Colors.grey)));
-                              }
 
-                              return Column(
-                                children: postSnapshot.data!.docs.map((post) {
-                                  var postData =
-                                      post.data() as Map<String, dynamic>;
+                              // --- UPGRADED: Using ListView.builder for performance ---
+                              return ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: postSnapshot.data!.docs.length,
+                                itemBuilder: (context, index) {
+                                  var postData = postSnapshot.data!.docs[index]
+                                      .data() as Map<String, dynamic>;
                                   String title =
                                       postData['title'] ?? 'No Title';
                                   String desc = postData['description'] ?? '';
-                                  String? imageUrl = postData['image_url'];
+
+                                  // --- UPGRADED: Multi-image array parsing ---
+                                  List<String> imageUrls = [];
+                                  if (postData.containsKey('image_urls') &&
+                                      postData['image_urls'] is List) {
+                                    imageUrls = List<String>.from(
+                                        postData['image_urls']);
+                                  } else if (postData
+                                          .containsKey('image_url') &&
+                                      postData['image_url'] != null &&
+                                      postData['image_url'].isNotEmpty) {
+                                    imageUrls = [postData['image_url']];
+                                  }
 
                                   String timeText = 'Recently';
                                   if (postData['timestamp'] != null) {
@@ -213,7 +338,7 @@ class DepartmentFeedScreen extends StatelessWidget {
                                                   PostDetailScreen(
                                                       title: title,
                                                       desc: desc,
-                                                      imageUrl: imageUrl,
+                                                      imageUrls: imageUrls,
                                                       orgName: orgName,
                                                       timeText: timeText))),
                                       child: Padding(
@@ -259,25 +384,19 @@ class DepartmentFeedScreen extends StatelessWidget {
                                                 maxLines: 3,
                                                 overflow:
                                                     TextOverflow.ellipsis),
-                                            if (imageUrl != null &&
-                                                imageUrl.isNotEmpty) ...[
+
+                                            // --- UPGRADED: Dynamic Grid Builder ---
+                                            if (imageUrls.isNotEmpty) ...[
                                               const SizedBox(height: 15),
-                                              ClipRRect(
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                  child: Image.network(imageUrl,
-                                                      fit: BoxFit.cover,
-                                                      width: double.infinity,
-                                                      height: 400,
-                                                      errorBuilder: (c, e, s) =>
-                                                          const SizedBox())),
+                                              _buildPostImageFeedGrid(
+                                                  imageUrls),
                                             ]
                                           ],
                                         ),
                                       ),
                                     ),
                                   );
-                                }).toList(),
+                                },
                               );
                             },
                           ),

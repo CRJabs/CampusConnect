@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 class PostDetailScreen extends StatelessWidget {
   final String title;
   final String desc;
-  final String? imageUrl;
+  // --- UPGRADED: Now accepts a List of strings instead of a single String ---
+  final List<String> imageUrls;
   final String orgName;
   final String timeText;
 
@@ -11,7 +12,7 @@ class PostDetailScreen extends StatelessWidget {
       {super.key,
       required this.title,
       required this.desc,
-      this.imageUrl,
+      required this.imageUrls,
       required this.orgName,
       required this.timeText});
 
@@ -65,17 +66,19 @@ class PostDetailScreen extends StatelessWidget {
                     style: const TextStyle(
                         fontSize: 36, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 40),
-                if (imageUrl != null && imageUrl!.isNotEmpty) ...[
-                  // FIXED: Used a ConstrainedBox instead of the constraints property
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 600),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(imageUrl!,
-                          fit: BoxFit.contain, width: double.infinity),
-                    ),
-                  ),
-                  const SizedBox(height: 40),
+
+                // --- UPGRADED: Loops through all images and stacks them vertically ---
+                if (imageUrls.isNotEmpty) ...[
+                  ...imageUrls.map((url) => Padding(
+                        padding: const EdgeInsets.only(bottom: 20),
+                        child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(url,
+                                fit: BoxFit.contain,
+                                width: double.infinity,
+                                errorBuilder: (c, e, s) => const SizedBox())),
+                      )),
+                  const SizedBox(height: 20),
                 ],
                 Text(desc, style: const TextStyle(fontSize: 18, height: 1.8)),
               ],

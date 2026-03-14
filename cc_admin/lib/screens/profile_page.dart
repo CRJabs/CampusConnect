@@ -60,6 +60,7 @@ class _ProfilePageState extends State<ProfilePage> {
         context, MaterialPageRoute(builder: (context) => const LoginScreen()));
   }
 
+  // --- OPTIMIZATION: Added cacheWidth to Avatars ---
   Widget _buildStandardAvatar(
       String? imageUrl, String logoText, double size, double fontSize,
       {bool hasBorder = false}) {
@@ -76,6 +77,8 @@ class _ProfilePageState extends State<ProfilePage> {
       child: hasImage
           ? Image.network(imageUrl,
               fit: BoxFit.cover,
+              // Forces the image decoder to heavily downsample the avatar
+              cacheWidth: (size * 2).toInt(),
               errorBuilder: (c, e, s) => Center(
                   child: Text(logoText,
                       style: TextStyle(
@@ -274,6 +277,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                         finalHeaderUrl!.isNotEmpty)
                                     ? Image.network(finalHeaderUrl!,
                                         fit: BoxFit.cover,
+                                        cacheWidth:
+                                            800, // OPTIMIZATION: Reduce loaded banner size in form
                                         errorBuilder: (c, e, s) => const Center(
                                             child: Icon(Icons.broken_image)))
                                     : const Center(
@@ -374,8 +379,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
             Future<void> handleMultiImageUpload() async {
               final ImagePicker picker = ImagePicker();
-              final List<XFile> selectedImages =
-                  await picker.pickMultiImage(imageQuality: 85);
+              final List<XFile> selectedImages = await picker.pickMultiImage(
+                  imageQuality: 80); // Reduced original quality
 
               if (selectedImages.isEmpty) return;
 
@@ -504,9 +509,6 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           )
                         ] else ...[
-                          // =========================================================
-                          // FIX 1: Wrapped the Staggered Grid in a Scroll View
-                          // =========================================================
                           Container(
                             height: 300,
                             decoration: BoxDecoration(
@@ -531,7 +533,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                                 child: Image.network(url,
                                                     height: double.infinity,
                                                     width: double.infinity,
-                                                    fit: BoxFit.cover)),
+                                                    fit: BoxFit.cover,
+                                                    // OPTIMIZATION: Only decode small preview memory footprint
+                                                    cacheWidth: 300)),
                                             Positioned(
                                                 top: 0,
                                                 right: 0,
@@ -661,8 +665,7 @@ class _ProfilePageState extends State<ProfilePage> {
           toolbarHeight: 100,
           backgroundColor: const Color(0xFF002147),
           foregroundColor: Colors.white,
-          title: Image.network(
-              'https://raw.githubusercontent.com/username/repo/branch/CampusConnect_White_Logo.png',
+          title: Image.network('../assets/logo.png',
               height: 60,
               errorBuilder: (context, error, stackTrace) => const Text(
                   'CampusConnect',
@@ -691,9 +694,6 @@ class _ProfilePageState extends State<ProfilePage> {
           String? headerUrl = data['header_image_url'];
           String? profileImageUrl = data['profile_image_url'];
 
-          // =========================================================
-          // FIX 2: Replaced the 'Align' wrapper with 'Center'
-          // =========================================================
           return SingleChildScrollView(
             child: Center(
               child: Container(
@@ -742,6 +742,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ? Stack(fit: StackFit.expand, children: [
                   Image.network(headerUrl,
                       fit: BoxFit.cover,
+                      cacheWidth: 1600, // OPTIMIZATION
                       errorBuilder: (c, e, s) => const SizedBox()),
                   Container(color: Colors.black.withOpacity(0.3))
                 ])
@@ -855,8 +856,15 @@ class _ProfilePageState extends State<ProfilePage> {
 
               final posts = snapshot.data!.docs;
 
-              return Column(
-                children: posts.map((post) {
+              // =========================================================
+              // OPTIMIZATION: Replaced Column + Map with ListView.builder
+              // =========================================================
+              return ListView.builder(
+                shrinkWrap: true, // Needed because it's inside a ScrollView
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: posts.length,
+                itemBuilder: (context, index) {
+                  var post = posts[index];
                   var postData = post.data() as Map<String, dynamic>;
                   String title = postData['title'] ?? 'No Title';
                   String desc = postData['description'] ?? '';
@@ -944,7 +952,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                   );
-                }).toList(),
+                },
               );
             },
           ),
@@ -962,6 +970,8 @@ class _ProfilePageState extends State<ProfilePage> {
             height: double.infinity,
             width: double.infinity,
             fit: BoxFit.cover,
+            // OPTIMIZATION: Only decode smaller thumbnail for grid
+            cacheWidth: 500,
             errorBuilder: (c, e, s) =>
                 const Center(child: Icon(Icons.broken_image))));
 
@@ -1119,6 +1129,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             padding: const EdgeInsets.only(bottom: 20),
                             child: ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
+                                // This specific view downloads the FULL image
                                 child: Image.network(url,
                                     fit: BoxFit.contain,
                                     width: double.infinity,

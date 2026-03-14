@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'department_feed_screen.dart';
 import 'post_detail_screen.dart';
 
@@ -13,8 +14,6 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   bool _isHomeTabActive = true;
-
-  // --- THIS IS THE FIX: Upgraded from a bool to a String to support 3+ tabs ---
   String _activeExploreTab = 'administrations';
 
   Future<Map<String, dynamic>> _fetchEntityData(String id) async {
@@ -31,7 +30,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           .get();
       if (doc.exists && doc.data() != null) return doc.data()!;
 
-      // --- NEW: Added administrations to the global feed lookup ---
       doc = await FirebaseFirestore.instance
           .collection('administrations')
           .doc(id)
@@ -114,126 +112,204 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildHeroCarousel() {
-    final List<Map<String, String>> carouselItems = [
-      {
-        'title': 'UB Days 2026 is Here!',
-        'desc':
-            'Visit the Official Medal Tally website here to see your department\'s standings!',
-        'img':
-            'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=1200'
-      },
-      {
-        'title': 'University of Bohol\'s 80th Charter Day',
-        'desc':
-            'Join us in celebrating eight decades of Scholarship, Character, and Service.',
-        'img':
-            'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=1200'
-      },
-      {
-        'title': 'Student Services Satisfaction Survey',
-        'desc': 'Help us serve you better by taking this quick survey.',
-        'img':
-            'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=1200'
-      },
-    ];
+    return StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('highlights')
+            .orderBy('timestamp', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const SizedBox(
+                height: 350,
+                child: Center(
+                    child:
+                        CircularProgressIndicator(color: Color(0xFF002147))));
+          }
 
-    return CarouselSlider(
-      options: CarouselOptions(
-          height: 350.0,
-          autoPlay: true,
-          autoPlayInterval: const Duration(seconds: 5),
-          enlargeCenterPage: true,
-          viewportFraction: 1.0),
-      items: carouselItems.map((item) {
-        return Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: const Color(0xFF002147),
-            borderRadius: BorderRadius.circular(16),
-            image: DecorationImage(
-                image: NetworkImage(item['img']!),
-                fit: BoxFit.cover,
-                colorFilter: ColorFilter.mode(
-                    Colors.black.withOpacity(0.5), BlendMode.darken)),
-          ),
-          padding: const EdgeInsets.all(40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Text(item['title']!,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              Text(item['desc']!,
-                  style: const TextStyle(color: Colors.white, fontSize: 18)),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFFC107),
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 16)),
-                onPressed: () {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => PostDetailScreen(
-                              title: item['title']!,
-                              desc: item['desc']!,
-                              orgName: 'Featured Banner',
-                              timeText: 'Pinned')));
-                },
-                child: const Text('View Details →',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
+          List<Map<String, dynamic>> carouselItems = [];
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            carouselItems = [
+              {
+                'carousel_title': 'Welcome to CampusConnect',
+                'carousel_desc':
+                    'The central hub for all campus announcements and organizations.',
+                'carousel_image_url':
+                    'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=1200',
+                'post_title': 'Welcome to CampusConnect',
+                'post_desc':
+                    'Check the Admin Portal to add your own custom highlights to this carousel!',
+              }
+            ];
+          } else {
+            carouselItems = snapshot.data!.docs
+                .map((doc) => doc.data() as Map<String, dynamic>)
+                .toList();
+          }
+
+          return CarouselSlider(
+            options: CarouselOptions(
+                height: 350.0,
+                autoPlay: true,
+                autoPlayInterval: const Duration(seconds: 6),
+                enlargeCenterPage: true,
+                viewportFraction: 1.0),
+            items: carouselItems.map((item) {
+              String cTitle = item['carousel_title'] ?? 'Announcement';
+              String cDesc = item['carousel_desc'] ?? '';
+              String cImageUrl = item['carousel_image_url'] ??
+                  'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=1200';
+              String pTitle = item['post_title'] ?? cTitle;
+              String pDesc = item['post_desc'] ?? cDesc;
+              String? pImageUrl = item['post_image_url'];
+
+              List<String> passImages =
+                  pImageUrl != null && pImageUrl.isNotEmpty ? [pImageUrl] : [];
+
+              return Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF002147),
+                  borderRadius: BorderRadius.circular(16),
+                  image: DecorationImage(
+                      image: NetworkImage(cImageUrl),
+                      fit: BoxFit.cover,
+                      colorFilter: ColorFilter.mode(
+                          Colors.black.withOpacity(0.5), BlendMode.darken)),
+                ),
+                padding: const EdgeInsets.all(40),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(cTitle,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 36,
+                            fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 10),
+                    Text(cDesc,
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 18)),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFFC107),
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 16)),
+                      onPressed: () {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => PostDetailScreen(
+                                    title: pTitle,
+                                    desc: pDesc,
+                                    imageUrls: passImages,
+                                    orgName: 'Featured Highlight',
+                                    timeText: 'Pinned')));
+                      },
+                      child: const Text('View Details →',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          );
+        });
   }
 
+  // =========================================================================
+  // FIX: Converted back to an Expanded Row layout so cards stretch to fill screen
+  // =========================================================================
   Widget _buildLatestAnnouncementsSection() {
-    return Row(
-      children: [
-        Expanded(
-            child: _buildInfoCard(
-                'University of Bohol',
-                'Campus Wide Advisory',
-                'Important update regarding campus entry protocols.',
-                Colors.red)),
-        const SizedBox(width: 15),
-        Expanded(
-            child: _buildInfoCard(
-                'UB SPS',
-                'Clearance Requirements',
-                '1st Semester clearance guidelines are now available.',
-                Colors.blue)),
-        const SizedBox(width: 15),
-        Expanded(
-            child: _buildInfoCard(
-                'UB NSSG',
-                'Student Assembly',
-                'Join the mandatory supreme student government assembly.',
-                Colors.green)),
-        const SizedBox(width: 15),
-        Expanded(
-            child: _buildInfoCard(
-                'UB CSO',
-                'Accreditation Deadline',
-                'Final call for campus student organizations accreditation.',
-                Colors.orange)),
-      ],
-    );
+    return StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('featured_sources')
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+                child: CircularProgressIndicator(color: Color(0xFF002147)));
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(
+                child: Text('Admin has not configured featured accounts yet.',
+                    style: TextStyle(color: Colors.grey)));
+          }
+
+          var allDocs = snapshot.data!.docs.toList();
+          allDocs.removeWhere((doc) {
+            var data = doc.data() as Map<String, dynamic>;
+            return data['org_id'] == null || data['org_id'].toString().isEmpty;
+          });
+
+          allDocs.shuffle();
+          var displayDocs = allDocs.take(4).toList();
+
+          if (displayDocs.isEmpty) {
+            return const Center(
+                child: Text('No valid featured accounts configured.',
+                    style: TextStyle(color: Colors.grey)));
+          }
+
+          List<Widget> rowChildren = [];
+
+          for (int i = 0; i < displayDocs.length; i++) {
+            var slotData = displayDocs[i].data() as Map<String, dynamic>;
+            String orgId = slotData['org_id'] ?? '';
+            String orgName = slotData['org_name'] ?? 'Unknown Source';
+            int badgeColor = slotData['badge_color'] ?? 0xFF002147;
+
+            Widget cardWidget = StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('organization_notices')
+                    .where('org_id', isEqualTo: orgId)
+                    .orderBy('timestamp', descending: true)
+                    .limit(1)
+                    .snapshots(),
+                builder: (context, postSnapshot) {
+                  if (!postSnapshot.hasData ||
+                      postSnapshot.data!.docs.isEmpty) {
+                    return _buildInfoCard(
+                        orgName,
+                        'Awaiting Announcements',
+                        'This organization has not published any recent updates.',
+                        Color(badgeColor),
+                        null);
+                  }
+
+                  var postData = postSnapshot.data!.docs.first.data()
+                      as Map<String, dynamic>;
+                  return _buildInfoCard(
+                      orgName,
+                      postData['title'] ?? 'No Title',
+                      postData['description'] ?? '',
+                      Color(badgeColor),
+                      postData);
+                });
+
+            // Wrap the card in Expanded so it fills the row dynamically
+            rowChildren.add(Expanded(child: cardWidget));
+
+            // Add horizontal spacing between cards, but not after the very last card
+            if (i < displayDocs.length - 1) {
+              rowChildren.add(const SizedBox(width: 15));
+            }
+          }
+
+          return Row(
+            children: rowChildren,
+          );
+        });
   }
 
-  Widget _buildInfoCard(
-      String source, String title, String desc, Color badgeColor) {
+  Widget _buildInfoCard(String source, String title, String desc,
+      Color badgeColor, Map<String, dynamic>? postData) {
     return Container(
-      height: 230,
+      height: 230, // Maintain uniform height
+      // Removed fixed width so Expanded wrapper can stretch it
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
           color: Colors.white,
@@ -263,23 +339,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
               maxLines: 2,
               overflow: TextOverflow.ellipsis),
           const Spacer(),
-          InkWell(
-            onTap: () {
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => PostDetailScreen(
-                          title: title,
-                          desc: desc,
-                          orgName: source,
-                          timeText: 'Featured')));
-            },
-            child: const Text('Read More →',
-                style: TextStyle(
-                    color: Colors.red,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14)),
-          ),
+          if (postData != null)
+            InkWell(
+              onTap: () {
+                List<String> imageUrls = [];
+                if (postData.containsKey('image_urls') &&
+                    postData['image_urls'] is List) {
+                  imageUrls = List<String>.from(postData['image_urls']);
+                } else if (postData.containsKey('image_url') &&
+                    postData['image_url'] != null &&
+                    postData['image_url'].isNotEmpty) {
+                  imageUrls = [postData['image_url']];
+                }
+
+                String timeText = 'Recently';
+                if (postData['timestamp'] != null) {
+                  DateTime date = (postData['timestamp'] as Timestamp).toDate();
+                  timeText = "${date.month}/${date.day}/${date.year}";
+                }
+
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => PostDetailScreen(
+                            title: title,
+                            desc: desc,
+                            imageUrls: imageUrls,
+                            orgName: source,
+                            timeText: timeText)));
+              },
+              child: const Text('Read More →',
+                  style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14)),
+            ),
         ],
       ),
     );
@@ -315,7 +409,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
             String orgId = postData['org_id'] ?? '';
             String title = postData['title'] ?? 'No Title';
             String desc = postData['description'] ?? '';
-            String? imageUrl = postData['image_url'];
+
+            List<String> imageUrls = [];
+            if (postData.containsKey('image_urls') &&
+                postData['image_urls'] is List) {
+              imageUrls = List<String>.from(postData['image_urls']);
+            } else if (postData.containsKey('image_url') &&
+                postData['image_url'] != null &&
+                postData['image_url'].isNotEmpty) {
+              imageUrls = [postData['image_url']];
+            }
 
             String timeText = 'Recently';
             if (postData['timestamp'] != null) {
@@ -354,7 +457,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               builder: (context) => PostDetailScreen(
                                   title: title,
                                   desc: desc,
-                                  imageUrl: imageUrl,
+                                  imageUrls: imageUrls,
                                   orgName: orgName,
                                   timeText: timeText))),
                       child: Padding(
@@ -414,16 +517,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     const TextStyle(fontSize: 15, height: 1.5),
                                 maxLines: 3,
                                 overflow: TextOverflow.ellipsis),
-                            if (imageUrl != null && imageUrl.isNotEmpty) ...[
+                            if (imageUrls.isNotEmpty) ...[
                               const SizedBox(height: 15),
-                              ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.network(imageUrl,
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                      height: 400,
-                                      errorBuilder: (c, e, s) =>
-                                          const SizedBox())),
+                              _buildPostImageFeedGrid(imageUrls),
                             ]
                           ],
                         ),
@@ -437,7 +533,118 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _buildPostImageFeedGrid(List<String> imageUrls) {
+    int imageCount = imageUrls.length;
+
+    ClipRRect gridImage(String url) => ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.network(url,
+            height: double.infinity,
+            width: double.infinity,
+            fit: BoxFit.cover,
+            cacheWidth: 500,
+            errorBuilder: (c, e, s) =>
+                const Center(child: Icon(Icons.broken_image))));
+
+    if (imageCount == 1) {
+      return AspectRatio(aspectRatio: 16 / 9, child: gridImage(imageUrls[0]));
+    } else if (imageCount == 2) {
+      return AspectRatio(
+          aspectRatio: 16 / 9,
+          child: StaggeredGrid.count(
+              crossAxisCount: 2,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              children: [
+                StaggeredGridTile.count(
+                    crossAxisCellCount: 1,
+                    mainAxisCellCount: 1,
+                    child: gridImage(imageUrls[0])),
+                StaggeredGridTile.count(
+                    crossAxisCellCount: 1,
+                    mainAxisCellCount: 1,
+                    child: gridImage(imageUrls[1]))
+              ]));
+    } else if (imageCount == 3) {
+      return AspectRatio(
+          aspectRatio: 16 / 9,
+          child: StaggeredGrid.count(
+              crossAxisCount: 3,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              children: [
+                StaggeredGridTile.count(
+                    crossAxisCellCount: 1,
+                    mainAxisCellCount: 1,
+                    child: gridImage(imageUrls[0])),
+                StaggeredGridTile.count(
+                    crossAxisCellCount: 1,
+                    mainAxisCellCount: 1,
+                    child: gridImage(imageUrls[1])),
+                StaggeredGridTile.count(
+                    crossAxisCellCount: 1,
+                    mainAxisCellCount: 1,
+                    child: gridImage(imageUrls[2]))
+              ]));
+    } else {
+      return AspectRatio(
+        aspectRatio: 16 / 9,
+        child: StaggeredGrid.count(
+          crossAxisCount: 4,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          children: [
+            StaggeredGridTile.count(
+                crossAxisCellCount: 2,
+                mainAxisCellCount: 2,
+                child: gridImage(imageUrls[0])),
+            StaggeredGridTile.count(
+                crossAxisCellCount: 2,
+                mainAxisCellCount: 1,
+                child: StaggeredGrid.count(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 8,
+                    crossAxisSpacing: 8,
+                    children: [
+                      StaggeredGridTile.count(
+                          crossAxisCellCount: 1,
+                          mainAxisCellCount: 1,
+                          child: gridImage(imageUrls[1])),
+                      StaggeredGridTile.count(
+                          crossAxisCellCount: 1,
+                          mainAxisCellCount: 1,
+                          child: gridImage(imageUrls[2]))
+                    ])),
+            StaggeredGridTile.count(
+                crossAxisCellCount: 2,
+                mainAxisCellCount: 1,
+                child: Stack(
+                  children: [
+                    gridImage(imageUrls[3]),
+                    if (imageCount > 4) ...[
+                      Positioned.fill(
+                          child: Container(
+                              decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.5),
+                                  borderRadius: BorderRadius.circular(8)),
+                              child: Center(
+                                  child: Text('+${imageCount - 3}',
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 32,
+                                          fontWeight: FontWeight.bold))))),
+                    ]
+                  ],
+                )),
+          ],
+        ),
+      );
+    }
+  }
+
   Widget _buildDynamicListSection(BuildContext context) {
+    String currentCollection = _activeExploreTab;
+
     return Container(
       decoration: BoxDecoration(
           color: Colors.white,
@@ -451,7 +658,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     bottom: BorderSide(color: Colors.grey.shade300, width: 2))),
             child: Row(
               children: [
-                // --- NEW: Added Administration Tab ---
                 _buildExploreTabButton('Administration', 'administrations'),
                 _buildExploreTabButton('Departments', 'departments'),
                 _buildExploreTabButton('Organizations', 'organizations'),
@@ -460,30 +666,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
-                .collection(
-                    _activeExploreTab) // Uses the dynamic string variable
+                .collection(currentCollection)
                 .orderBy('name')
                 .snapshots(),
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
+              if (snapshot.connectionState == ConnectionState.waiting)
                 return const Padding(
                     padding: EdgeInsets.all(40.0),
                     child: Center(
                         child: CircularProgressIndicator(
                             color: Color(0xFF002147))));
-              }
-              if (snapshot.hasError) {
+              if (snapshot.hasError)
                 return Padding(
                     padding: const EdgeInsets.all(40.0),
                     child: Center(child: Text('Error: ${snapshot.error}')));
-              }
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
                 return Padding(
                     padding: const EdgeInsets.all(40.0),
                     child: Center(
-                        child: Text('No data found in "$_activeExploreTab".',
+                        child: Text('No data found in "$currentCollection".',
                             style: const TextStyle(color: Colors.grey))));
-              }
 
               final docs = snapshot.data!.docs;
 
@@ -558,7 +760,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onTap: () {
                       if (newNotices > 0) {
                         FirebaseFirestore.instance
-                            .collection(_activeExploreTab)
+                            .collection(currentCollection)
                             .doc(docs[index].id)
                             .update({'new_notices_count': 0});
                       }
@@ -568,8 +770,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           MaterialPageRoute(
                               builder: (context) => DepartmentFeedScreen(
                                   orgId: docs[index].id,
-                                  collectionPath:
-                                      _activeExploreTab))); // Passes dynamic collection automatically
+                                  collectionPath: currentCollection)));
                     },
                   );
                 },
@@ -581,7 +782,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // --- UPDATED: Uses the dynamic collection name instead of a boolean ---
   Widget _buildExploreTabButton(String title, String targetCollection) {
     bool isActive = _activeExploreTab == targetCollection;
     return Expanded(
