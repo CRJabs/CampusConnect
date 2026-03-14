@@ -13,7 +13,35 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   bool _isHomeTabActive = true;
-  bool _isShowingDepartments = true;
+
+  // --- THIS IS THE FIX: Upgraded from a bool to a String to support 3+ tabs ---
+  String _activeExploreTab = 'administrations';
+
+  Future<Map<String, dynamic>> _fetchEntityData(String id) async {
+    try {
+      var doc = await FirebaseFirestore.instance
+          .collection('organizations')
+          .doc(id)
+          .get();
+      if (doc.exists && doc.data() != null) return doc.data()!;
+
+      doc = await FirebaseFirestore.instance
+          .collection('departments')
+          .doc(id)
+          .get();
+      if (doc.exists && doc.data() != null) return doc.data()!;
+
+      // --- NEW: Added administrations to the global feed lookup ---
+      doc = await FirebaseFirestore.instance
+          .collection('administrations')
+          .doc(id)
+          .get();
+      if (doc.exists && doc.data() != null) return doc.data()!;
+    } catch (e) {
+      return {};
+    }
+    return {};
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -295,32 +323,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
               timeText = "${date.month}/${date.day}/${date.year}";
             }
 
-            return FutureBuilder<DocumentSnapshot>(
-                future: FirebaseFirestore.instance
-                    .collection('organizations')
-                    .doc(orgId)
-                    .get(),
-                builder: (context, orgSnapshot) {
+            return FutureBuilder<Map<String, dynamic>>(
+                future: _fetchEntityData(orgId),
+                builder: (context, entitySnapshot) {
                   String orgName = "Campus Organization";
                   String? profileUrl;
                   String logoText = "UB";
 
-                  if (orgSnapshot.hasData && orgSnapshot.data!.exists) {
-                    var orgData =
-                        orgSnapshot.data!.data() as Map<String, dynamic>;
+                  if (entitySnapshot.hasData &&
+                      entitySnapshot.data!.isNotEmpty) {
+                    var orgData = entitySnapshot.data!;
                     orgName = orgData['name'] ?? orgName;
                     profileUrl = orgData['profile_image_url'];
                     logoText = orgData['logo_text'] ?? 'UB';
-                  } else {
-                    FirebaseFirestore.instance
-                        .collection('departments')
-                        .doc(orgId)
-                        .get()
-                        .then((depDoc) {
-                      if (depDoc.exists && mounted) {
-                        // Safe state update logic if needed
-                      }
-                    });
                   }
 
                   return Card(
@@ -357,20 +372,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       shape: BoxShape.circle),
                                   clipBehavior: Clip.antiAlias,
                                   child: (profileUrl != null &&
-                                          profileUrl.isNotEmpty)
+                                          profileUrl.trim().isNotEmpty)
                                       ? Image.network(profileUrl,
                                           fit: BoxFit.cover,
                                           errorBuilder: (c, e, s) => Center(
-                                              child: Text(
-                                                  logoText.substring(0, 1),
-                                                  style: const TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 14))))
+                                              child:
+                                                  Text(logoText.isNotEmpty ? logoText.substring(0, 1) : 'U',
+                                                      style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 14,
+                                                          fontWeight: FontWeight
+                                                              .bold))))
                                       : Center(
-                                          child: Text(logoText.substring(0, 1),
+                                          child: Text(logoText.isNotEmpty ? logoText.substring(0, 1) : 'U',
                                               style: const TextStyle(
                                                   color: Colors.white,
-                                                  fontSize: 14))),
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold))),
                                 ),
                                 const SizedBox(width: 10),
                                 Column(
@@ -420,9 +438,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildDynamicListSection(BuildContext context) {
-    String currentCollection =
-        _isShowingDepartments ? 'departments' : 'organizations';
-
     return Container(
       decoration: BoxDecoration(
           color: Colors.white,
@@ -436,14 +451,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     bottom: BorderSide(color: Colors.grey.shade300, width: 2))),
             child: Row(
               children: [
-                _buildExploreTabButton('Departments', true),
-                _buildExploreTabButton('Organizations', false),
+                // --- NEW: Added Administration Tab ---
+                _buildExploreTabButton('Administration', 'administrations'),
+                _buildExploreTabButton('Departments', 'departments'),
+                _buildExploreTabButton('Organizations', 'organizations'),
               ],
             ),
           ),
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
-                .collection(currentCollection)
+                .collection(
+                    _activeExploreTab) // Uses the dynamic string variable
                 .orderBy('name')
                 .snapshots(),
             builder: (context, snapshot) {
@@ -463,7 +481,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 return Padding(
                     padding: const EdgeInsets.all(40.0),
                     child: Center(
-                        child: Text('No data found in "$currentCollection".',
+                        child: Text('No data found in "$_activeExploreTab".',
                             style: const TextStyle(color: Colors.grey))));
               }
 
@@ -479,16 +497,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   var data = docs[index].data() as Map<String, dynamic>;
                   String name = data['name'] ?? 'Unknown';
                   String logoText = data['logo_text'] ?? 'UB';
-                  int newNotices = data['new_notices_count'] ?? 0;
+                  int newNotices = int.tryParse(
+                          data['new_notices_count']?.toString() ?? '0') ??
+                      0;
+                  String? profileUrl = data['profile_image_url'];
 
                   return ListTile(
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 20, vertical: 10),
-                    leading: CircleAvatar(
-                        backgroundColor: const Color(0xFF002147),
-                        child: Text(logoText,
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 14))),
+                    leading: Container(
+                      width: 45,
+                      height: 45,
+                      decoration: const BoxDecoration(
+                          color: Color(0xFF002147), shape: BoxShape.circle),
+                      clipBehavior: Clip.antiAlias,
+                      child: (profileUrl != null && profileUrl.trim().isNotEmpty)
+                          ? Image.network(profileUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (c, e, s) => Center(
+                                  child: Text(
+                                      logoText.length > 4
+                                          ? logoText.substring(0, 4)
+                                          : logoText,
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold))))
+                          : Center(
+                              child: Text(
+                                  logoText.length > 4
+                                      ? logoText.substring(0, 4)
+                                      : logoText,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold))),
+                    ),
                     title: Text(name,
                         style: const TextStyle(fontWeight: FontWeight.w600)),
                     trailing: Row(
@@ -511,12 +555,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         const Icon(Icons.chevron_right, color: Colors.grey),
                       ],
                     ),
-                    onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => DepartmentFeedScreen(
-                                orgId: docs[index].id,
-                                collectionPath: currentCollection))),
+                    onTap: () {
+                      if (newNotices > 0) {
+                        FirebaseFirestore.instance
+                            .collection(_activeExploreTab)
+                            .doc(docs[index].id)
+                            .update({'new_notices_count': 0});
+                      }
+
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => DepartmentFeedScreen(
+                                  orgId: docs[index].id,
+                                  collectionPath:
+                                      _activeExploreTab))); // Passes dynamic collection automatically
+                    },
                   );
                 },
               );
@@ -527,11 +581,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildExploreTabButton(String title, bool isDepartmentTab) {
-    bool isActive = _isShowingDepartments == isDepartmentTab;
+  // --- UPDATED: Uses the dynamic collection name instead of a boolean ---
+  Widget _buildExploreTabButton(String title, String targetCollection) {
+    bool isActive = _activeExploreTab == targetCollection;
     return Expanded(
       child: InkWell(
-        onTap: () => setState(() => _isShowingDepartments = isDepartmentTab),
+        onTap: () => setState(() => _activeExploreTab = targetCollection),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 15),
           decoration: BoxDecoration(

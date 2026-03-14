@@ -77,4 +77,5 @@ class DefaultFirebaseOptions {
     authDomain: 'campusconnect-ub.firebaseapp.com',
     storageBucket: 'campusconnect-ub.firebasestorage.app',
   );
+
 }
