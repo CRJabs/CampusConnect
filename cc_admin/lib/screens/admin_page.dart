@@ -15,6 +15,10 @@ class AdminPage extends StatefulWidget {
 }
 
 class _AdminPageState extends State<AdminPage> {
+  // --- NEW STATE VARS ---
+  String _activeDirectoryTab = 'administrations';
+  bool _isShowingAnsweredFaqs = false; // False = Pending/Blank, True = Answered
+
   void _logout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
     if (!context.mounted) return;
@@ -111,11 +115,12 @@ class _AdminPageState extends State<AdminPage> {
                           style: TextStyle(
                               fontSize: 13, fontWeight: FontWeight.bold))
                     ])),
+                    // --- UPGRADED: Settings changed to FAQ ---
                     Tab(
                         child: Row(children: [
-                      Icon(Icons.build_circle, size: 16),
+                      Icon(Icons.help_outline, size: 16),
                       SizedBox(width: 8),
-                      Text('Settings',
+                      Text('FAQ',
                           style: TextStyle(
                               fontSize: 13, fontWeight: FontWeight.bold))
                     ])),
@@ -151,7 +156,7 @@ class _AdminPageState extends State<AdminPage> {
                 _buildAccountsTab(),
                 _buildDirectoryTab(),
                 _buildHighlightsTab(),
-                _buildFutureTab(),
+                _buildFaqTab(), // --- UPGRADED: Connects to new FAQ manager ---
               ],
             ),
           ),
@@ -601,8 +606,6 @@ class _AdminPageState extends State<AdminPage> {
   // ==========================================
   // TAB 2: DIRECTORY MANAGEMENT
   // ==========================================
-  String _activeDirectoryTab = 'administrations';
-
   Widget _buildDirectoryTab() {
     return StatefulBuilder(builder: (context, setTabState) {
       return Padding(
@@ -892,16 +895,14 @@ class _AdminPageState extends State<AdminPage> {
   }
 
   // ==========================================
-  // TAB 3: HIGHLIGHTS & FEATURED MANAGEMENT (UPGRADED)
+  // TAB 3: HIGHLIGHTS MANAGEMENT
   // ==========================================
   Widget _buildHighlightsTab() {
-    // FIX: Using SingleChildScrollView so both lists can coexist and scroll
     return SingleChildScrollView(
       padding: const EdgeInsets.all(40),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --- PART 1: CAROUSEL HIGHLIGHTS ---
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -923,7 +924,6 @@ class _AdminPageState extends State<AdminPage> {
           const SizedBox(height: 20),
           const Divider(),
           const SizedBox(height: 20),
-
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('highlights')
@@ -939,10 +939,8 @@ class _AdminPageState extends State<AdminPage> {
                         'No highlights found. They will fallback to default if empty.'));
 
               return ListView.builder(
-                shrinkWrap:
-                    true, // Prevents infinite height error inside Column
-                physics:
-                    const NeverScrollableScrollPhysics(), // Disables inner scrolling
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
                 itemCount: snapshot.data!.docs.length,
                 itemBuilder: (context, index) {
                   var doc = snapshot.data!.docs[index];
@@ -1003,10 +1001,7 @@ class _AdminPageState extends State<AdminPage> {
               );
             },
           ),
-
           const SizedBox(height: 60),
-
-          // --- PART 2: THE 6 FEATURED ACCOUNT SLOTS ---
           const Text('Featured Announcements (Dashboard Cards)',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
@@ -1016,8 +1011,6 @@ class _AdminPageState extends State<AdminPage> {
           const SizedBox(height: 20),
           const Divider(),
           const SizedBox(height: 20),
-
-          // We build exactly 6 cards corresponding to doc IDs slot_1 through slot_6
           ...List.generate(6, (index) {
             String slotId = 'slot_${index + 1}';
             return StreamBuilder<DocumentSnapshot>(
@@ -1038,8 +1031,7 @@ class _AdminPageState extends State<AdminPage> {
 
                   String orgName = data?['org_name'] ?? 'Empty Slot';
                   String collection = data?['collection'] ?? 'None';
-                  int badgeColorInt =
-                      data?['badge_color'] ?? 0xFF9E9E9E; // Default grey
+                  int badgeColorInt = data?['badge_color'] ?? 0xFF9E9E9E;
 
                   return Card(
                     color: Colors.white,
@@ -1097,17 +1089,15 @@ class _AdminPageState extends State<AdminPage> {
     String selectedCollection = currentData?['collection'] ?? 'departments';
     String? selectedOrgId = currentData?['org_id'];
     String? selectedOrgName = currentData?['org_name'];
-    int selectedColor =
-        currentData?['badge_color'] ?? 0xFFF44336; // Default Red
+    int selectedColor = currentData?['badge_color'] ?? 0xFFF44336;
 
-    // Predefined vibrant badge colors
     final List<int> badgeColors = [
-      0xFFF44336, // Red
-      0xFF2196F3, // Blue
-      0xFF4CAF50, // Green
-      0xFFFF9800, // Orange
-      0xFF9C27B0, // Purple
-      0xFF009688, // Teal
+      0xFFF44336,
+      0xFF2196F3,
+      0xFF4CAF50,
+      0xFFFF9800,
+      0xFF9C27B0,
+      0xFF009688,
     ];
 
     bool isSaving = false;
@@ -1147,8 +1137,7 @@ class _AdminPageState extends State<AdminPage> {
                       onChanged: (val) {
                         setDialogState(() {
                           selectedCollection = val!;
-                          selectedOrgId =
-                              null; // Reset entity when collection changes
+                          selectedOrgId = null;
                           selectedOrgName = null;
                         });
                       },
@@ -1166,7 +1155,6 @@ class _AdminPageState extends State<AdminPage> {
                         if (!snapshot.hasData)
                           return const LinearProgressIndicator();
 
-                        // Validate that the selectedOrgId still exists in this stream
                         bool idExists = snapshot.data!.docs
                             .any((doc) => doc.id == selectedOrgId);
                         if (!idExists) {
@@ -1186,7 +1174,6 @@ class _AdminPageState extends State<AdminPage> {
                           onChanged: (val) {
                             setDialogState(() {
                               selectedOrgId = val;
-                              // Save the name too so the Dashboard doesn't have to do extra reads!
                               selectedOrgName = snapshot.data!.docs
                                   .firstWhere((doc) => doc.id == val)['name'];
                             });
@@ -1487,7 +1474,7 @@ class _AdminPageState extends State<AdminPage> {
                                   ScaffoldMessenger.of(dialogContext)
                                       .showSnackBar(const SnackBar(
                                           content: Text(
-                                              'Please fill out all required fields and ensure a Carousel Banner is uploaded.')));
+                                              'Please fill out all required text fields and ensure a Carousel Banner is uploaded.')));
                                   return;
                                 }
 
@@ -1540,23 +1527,316 @@ class _AdminPageState extends State<AdminPage> {
         });
   }
 
-  Widget _buildFutureTab() {
-    return const Center(
+  // ==========================================
+  // TAB 4: FAQ MANAGEMENT (NEW)
+  // ==========================================
+  Widget _buildFaqTab() {
+    return Padding(
+      padding: const EdgeInsets.all(40),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.construction, size: 80, color: Colors.grey),
-          SizedBox(height: 20),
-          Text('System Settings & Analytics',
-              style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey)),
-          SizedBox(height: 10),
-          Text('Reserved for future implementation.',
-              style: TextStyle(color: Colors.grey)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Assistance Center (FAQ) Manager',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF002147),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 20)),
+                onPressed: () =>
+                    _showAnswerFaqDialog(null, null), // Add manual FAQ
+                icon: const Icon(Icons.add_comment),
+                label: const Text('Add FAQ Manually',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+              )
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Toggle between Blank (Pending) and Answered
+          Container(
+            decoration: BoxDecoration(
+                border: Border(
+                    bottom: BorderSide(color: Colors.grey.shade300, width: 2))),
+            child: Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () => setState(() => _isShowingAnsweredFaqs = false),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      decoration: BoxDecoration(
+                          border: Border(
+                              bottom: BorderSide(
+                                  color: !_isShowingAnsweredFaqs
+                                      ? const Color(0xFF002147)
+                                      : Colors.transparent,
+                                  width: 3))),
+                      child: Center(
+                          child: Text('Pending Questions (Blank)',
+                              style: TextStyle(
+                                  fontWeight: !_isShowingAnsweredFaqs
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: !_isShowingAnsweredFaqs
+                                      ? const Color(0xFF002147)
+                                      : Colors.grey))),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: InkWell(
+                    onTap: () => setState(() => _isShowingAnsweredFaqs = true),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      decoration: BoxDecoration(
+                          border: Border(
+                              bottom: BorderSide(
+                                  color: _isShowingAnsweredFaqs
+                                      ? const Color(0xFF002147)
+                                      : Colors.transparent,
+                                  width: 3))),
+                      child: Center(
+                          child: Text('Answered FAQs',
+                              style: TextStyle(
+                                  fontWeight: _isShowingAnsweredFaqs
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: _isShowingAnsweredFaqs
+                                      ? const Color(0xFF002147)
+                                      : Colors.grey))),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('faqs')
+                  .orderBy('timestamp', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting)
+                  return const Center(child: CircularProgressIndicator());
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
+                  return const Center(child: Text('No questions found.'));
+
+                // Filter locally based on the toggle state to avoid needing complex Firestore indexes
+                var docs = snapshot.data!.docs.where((doc) {
+                  var data = doc.data() as Map<String, dynamic>;
+                  bool isAnswered = data['is_answered'] ?? false;
+                  return isAnswered == _isShowingAnsweredFaqs;
+                }).toList();
+
+                if (docs.isEmpty) {
+                  return Center(
+                      child: Text(_isShowingAnsweredFaqs
+                          ? 'No answered FAQs available.'
+                          : 'No pending questions waiting. You\'re all caught up!'));
+                }
+
+                return ListView.builder(
+                  itemCount: docs.length,
+                  itemBuilder: (context, index) {
+                    var doc = docs[index];
+                    var data = doc.data() as Map<String, dynamic>;
+
+                    String q = data['question'] ?? 'No Question';
+                    String a = data['answer'] ?? '';
+                    String timeText = 'Unknown time';
+                    if (data['timestamp'] != null) {
+                      DateTime dt = (data['timestamp'] as Timestamp).toDate();
+                      timeText = "${dt.month}/${dt.day}/${dt.year}";
+                    }
+
+                    return Card(
+                      color: Colors.white,
+                      surfaceTintColor: Colors.transparent,
+                      elevation: 0,
+                      margin: const EdgeInsets.only(bottom: 15),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: Colors.grey.shade200)),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 15),
+                        leading: CircleAvatar(
+                            backgroundColor: _isShowingAnsweredFaqs
+                                ? Colors.green
+                                : Colors.orange,
+                            child: Icon(
+                                _isShowingAnsweredFaqs
+                                    ? Icons.check
+                                    : Icons.question_mark,
+                                color: Colors.white)),
+                        title: Text(q,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 16)),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 5),
+                            if (_isShowingAnsweredFaqs) ...[
+                              Text(a,
+                                  style: TextStyle(color: Colors.grey.shade700),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis),
+                              const SizedBox(height: 5),
+                            ],
+                            Text('Submitted: $timeText',
+                                style: const TextStyle(
+                                    color: Colors.grey, fontSize: 12)),
+                          ],
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (!_isShowingAnsweredFaqs)
+                              ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF002147),
+                                      foregroundColor: Colors.white),
+                                  onPressed: () =>
+                                      _showAnswerFaqDialog(doc.id, data),
+                                  icon: const Icon(Icons.reply, size: 18),
+                                  label: const Text('Provide Answer'))
+                            else
+                              TextButton.icon(
+                                  onPressed: () =>
+                                      _showAnswerFaqDialog(doc.id, data),
+                                  icon: const Icon(Icons.edit, size: 18),
+                                  label: const Text('Edit Answer')),
+                            const SizedBox(width: 10),
+                            TextButton.icon(
+                                style: TextButton.styleFrom(
+                                    foregroundColor: Colors.red),
+                                onPressed: () => FirebaseFirestore.instance
+                                    .collection('faqs')
+                                    .doc(doc.id)
+                                    .delete(),
+                                icon: const Icon(Icons.delete, size: 18),
+                                label: const Text('Delete')),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          )
         ],
       ),
     );
+  }
+
+  void _showAnswerFaqDialog(String? docId, Map<String, dynamic>? data) {
+    final questionCtrl = TextEditingController(text: data?['question']);
+    final answerCtrl = TextEditingController(text: data?['answer']);
+    bool isSaving = false;
+
+    showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          return StatefulBuilder(builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              title: Text(
+                  docId == null ? 'Add Manual FAQ' : 'Respond to Question',
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              content: SizedBox(
+                width: 500,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (docId != null)
+                      const Text(
+                          'Providing an answer here will automatically move this item to the public FAQ board on the Kiosk.',
+                          style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    const SizedBox(height: 15),
+                    TextField(
+                        controller: questionCtrl,
+                        decoration: const InputDecoration(
+                            labelText: 'Question',
+                            border: OutlineInputBorder()),
+                        maxLines: 2),
+                    const SizedBox(height: 15),
+                    TextField(
+                        controller: answerCtrl,
+                        decoration: const InputDecoration(
+                            labelText: 'Official Answer',
+                            border: OutlineInputBorder(),
+                            alignLabelWithHint: true),
+                        maxLines: 5),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                    onPressed:
+                        isSaving ? null : () => Navigator.pop(dialogContext),
+                    child: const Text('Cancel',
+                        style: TextStyle(color: Colors.grey))),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF002147),
+                      foregroundColor: Colors.white),
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          if (questionCtrl.text.isEmpty ||
+                              answerCtrl.text.isEmpty) return;
+
+                          setDialogState(() => isSaving = true);
+                          try {
+                            Map<String, dynamic> payload = {
+                              'question': questionCtrl.text.trim(),
+                              'answer': answerCtrl.text.trim(),
+                              'is_answered': true, // Officially answered now
+                              'timestamp': FieldValue.serverTimestamp(),
+                            };
+
+                            if (docId == null) {
+                              await FirebaseFirestore.instance
+                                  .collection('faqs')
+                                  .add(payload);
+                            } else {
+                              await FirebaseFirestore.instance
+                                  .collection('faqs')
+                                  .doc(docId)
+                                  .update(payload);
+                            }
+
+                            if (!dialogContext.mounted) return;
+                            Navigator.pop(dialogContext);
+                          } catch (e) {
+                            if (dialogContext.mounted) {
+                              ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                  SnackBar(content: Text('Error: $e')));
+                            }
+                            setDialogState(() => isSaving = false);
+                          }
+                        },
+                  child: isSaving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(color: Colors.white))
+                      : const Text('Publish Answer',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                )
+              ],
+            );
+          });
+        });
   }
 }

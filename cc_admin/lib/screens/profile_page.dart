@@ -60,7 +60,6 @@ class _ProfilePageState extends State<ProfilePage> {
         context, MaterialPageRoute(builder: (context) => const LoginScreen()));
   }
 
-  // --- OPTIMIZATION: Added cacheWidth to Avatars ---
   Widget _buildStandardAvatar(
       String? imageUrl, String logoText, double size, double fontSize,
       {bool hasBorder = false}) {
@@ -77,7 +76,6 @@ class _ProfilePageState extends State<ProfilePage> {
       child: hasImage
           ? Image.network(imageUrl,
               fit: BoxFit.cover,
-              // Forces the image decoder to heavily downsample the avatar
               cacheWidth: (size * 2).toInt(),
               errorBuilder: (c, e, s) => Center(
                   child: Text(logoText,
@@ -115,9 +113,29 @@ class _ProfilePageState extends State<ProfilePage> {
 
             Future<void> handleImageUpload(bool isProfileImage) async {
               final ImagePicker picker = ImagePicker();
+
+              // --- OPTIMIZATION: Built-in Compression ---
               final XFile? image = await picker.pickImage(
-                  source: ImageSource.gallery, imageQuality: 85);
+                source: ImageSource.gallery,
+                imageQuality: 75, // Compress quality to 75%
+                maxWidth: 1920, // Prevent massive 4K+ dimension uploads
+                maxHeight: 1920,
+              );
+
               if (image == null) return;
+
+              // --- OPTIMIZATION: 50MB Strict Size Check ---
+              int fileBytes = await image.length();
+              if (fileBytes > 50 * 1024 * 1024) {
+                // 50 Megabytes
+                if (dialogContext.mounted) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      const SnackBar(
+                          content: Text(
+                              'Upload failed. Image exceeds the 50MB limit.')));
+                }
+                return;
+              }
 
               setDialogState(() {
                 if (isProfileImage) {
@@ -235,7 +253,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
-                                        const Text('Profile Photo',
+                                        const Text('Profile Photo (Max 50MB)',
                                             style: TextStyle(
                                                 fontWeight: FontWeight.bold)),
                                         const SizedBox(height: 5),
@@ -261,7 +279,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                       ]))
                                 ]),
                             const SizedBox(height: 30),
-                            const Text('Banner Image',
+                            const Text('Banner Image (Max 50MB)',
                                 style: TextStyle(fontWeight: FontWeight.bold)),
                             const SizedBox(height: 10),
                             Container(
@@ -277,8 +295,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                         finalHeaderUrl!.isNotEmpty)
                                     ? Image.network(finalHeaderUrl!,
                                         fit: BoxFit.cover,
-                                        cacheWidth:
-                                            800, // OPTIMIZATION: Reduce loaded banner size in form
+                                        cacheWidth: 800,
                                         errorBuilder: (c, e, s) => const Center(
                                             child: Icon(Icons.broken_image)))
                                     : const Center(
@@ -379,11 +396,38 @@ class _ProfilePageState extends State<ProfilePage> {
 
             Future<void> handleMultiImageUpload() async {
               final ImagePicker picker = ImagePicker();
+
+              // --- OPTIMIZATION: Built-in Compression ---
               final List<XFile> selectedImages = await picker.pickMultiImage(
-                  imageQuality: 80); // Reduced original quality
+                imageQuality: 70, // Slightly more aggressive for bulk uploads
+                maxWidth: 1920,
+                maxHeight: 1920,
+              );
 
               if (selectedImages.isEmpty) return;
 
+              // --- OPTIMIZATION: Check all files for 50MB Strict Size Check ---
+              List<XFile> validImages = [];
+              bool oversizedSkipped = false;
+
+              for (var img in selectedImages) {
+                int bytes = await img.length();
+                if (bytes <= 50 * 1024 * 1024) {
+                  validImages.add(img);
+                } else {
+                  oversizedSkipped = true;
+                }
+              }
+
+              if (oversizedSkipped && dialogContext.mounted) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(const SnackBar(
+                    content: Text(
+                        'Some images were skipped for exceeding the 50MB limit.')));
+              }
+
+              if (validImages.isEmpty) return;
+
+              // Validate remaining 100 image limit
               int currentCount = uploadedImageUrls.length;
               int remainingSlots = 100 - currentCount;
 
@@ -398,7 +442,7 @@ class _ProfilePageState extends State<ProfilePage> {
               }
 
               final List<XFile> imagesToUpload =
-                  selectedImages.take(remainingSlots).toList();
+                  validImages.take(remainingSlots).toList();
 
               setDialogState(() => uploadingCount += imagesToUpload.length);
 
@@ -501,7 +545,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                     Icon(Icons.image_search,
                                         color: Colors.grey, size: 40),
                                     SizedBox(height: 10),
-                                    Text('Add images from gallery (max 100)',
+                                    Text(
+                                        'Add images from gallery (Max 50MB per file)',
                                         style: TextStyle(color: Colors.grey))
                                   ],
                                 ),
@@ -534,7 +579,6 @@ class _ProfilePageState extends State<ProfilePage> {
                                                     height: double.infinity,
                                                     width: double.infinity,
                                                     fit: BoxFit.cover,
-                                                    // OPTIMIZATION: Only decode small preview memory footprint
                                                     cacheWidth: 300)),
                                             Positioned(
                                                 top: 0,
@@ -665,7 +709,8 @@ class _ProfilePageState extends State<ProfilePage> {
           toolbarHeight: 100,
           backgroundColor: const Color(0xFF002147),
           foregroundColor: Colors.white,
-          title: Image.network('../assets/logo.png',
+          title: Image.network(
+              'https://raw.githubusercontent.com/username/repo/branch/CampusConnect_White_Logo.png',
               height: 60,
               errorBuilder: (context, error, stackTrace) => const Text(
                   'CampusConnect',
@@ -742,7 +787,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ? Stack(fit: StackFit.expand, children: [
                   Image.network(headerUrl,
                       fit: BoxFit.cover,
-                      cacheWidth: 1600, // OPTIMIZATION
+                      cacheWidth: 1600,
                       errorBuilder: (c, e, s) => const SizedBox()),
                   Container(color: Colors.black.withOpacity(0.3))
                 ])
@@ -856,11 +901,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
               final posts = snapshot.data!.docs;
 
-              // =========================================================
-              // OPTIMIZATION: Replaced Column + Map with ListView.builder
-              // =========================================================
               return ListView.builder(
-                shrinkWrap: true, // Needed because it's inside a ScrollView
+                shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: posts.length,
                 itemBuilder: (context, index) {
@@ -970,7 +1012,6 @@ class _ProfilePageState extends State<ProfilePage> {
             height: double.infinity,
             width: double.infinity,
             fit: BoxFit.cover,
-            // OPTIMIZATION: Only decode smaller thumbnail for grid
             cacheWidth: 500,
             errorBuilder: (c, e, s) =>
                 const Center(child: Icon(Icons.broken_image))));
@@ -1129,7 +1170,6 @@ class _ProfilePageState extends State<ProfilePage> {
                             padding: const EdgeInsets.only(bottom: 20),
                             child: ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
-                                // This specific view downloads the FULL image
                                 child: Image.network(url,
                                     fit: BoxFit.contain,
                                     width: double.infinity,
