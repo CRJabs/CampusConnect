@@ -68,9 +68,9 @@ class _ProfilePageState extends State<ProfilePage> {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: const Color(0xFF002147),
+        color: Colors.white,
         shape: BoxShape.circle,
-        border: hasBorder ? Border.all(color: Colors.white, width: 5) : null,
+        border: hasBorder ? Border.all(color: Colors.white, width: 1) : null,
       ),
       clipBehavior: Clip.antiAlias,
       child: hasImage
@@ -214,7 +214,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             TextFormField(
                                 controller: nameCtrl,
                                 decoration: const InputDecoration(
-                                    labelText: 'Organization Name',
+                                    labelText: 'Name',
                                     border: OutlineInputBorder()),
                                 validator: (value) =>
                                     value!.isEmpty ? 'Name required' : null),
@@ -224,7 +224,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 decoration: const InputDecoration(
                                     labelText: 'Acronym',
                                     border: OutlineInputBorder()),
-                                maxLength: 4),
+                                maxLength: 6),
                             const SizedBox(height: 15),
                             TextFormField(
                                 controller: bioCtrl,
@@ -236,11 +236,11 @@ class _ProfilePageState extends State<ProfilePage> {
                             const SizedBox(height: 25),
                             const Divider(),
                             const SizedBox(height: 15),
-                            const Text('Media Assets',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    color: Color(0xFF002147))),
+                            // const Text('Media Assets',
+                            //     style: TextStyle(
+                            //         fontWeight: FontWeight.bold,
+                            //         fontSize: 16,
+                            //         color: Color(0xFF002147))),
                             const SizedBox(height: 20),
                             Row(
                                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -477,7 +477,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
             return AlertDialog(
               backgroundColor: Colors.white,
-              title: const Text('Publish Announcement',
+              title: const Text('Post Details',
                   style: TextStyle(fontWeight: FontWeight.bold)),
               content: SizedBox(
                 width: 600,
@@ -491,10 +491,10 @@ class _ProfilePageState extends State<ProfilePage> {
                         TextFormField(
                             controller: titleCtrl,
                             decoration: const InputDecoration(
-                                labelText: 'Announcement Title',
+                                labelText: 'Header',
                                 border: OutlineInputBorder()),
                             validator: (value) =>
-                                value!.isEmpty ? 'Title required' : null),
+                                value!.isEmpty ? 'Header required' : null),
                         const SizedBox(height: 15),
                         TextFormField(
                             controller: descCtrl,
@@ -634,8 +634,8 @@ class _ProfilePageState extends State<ProfilePage> {
                         style: TextStyle(color: Colors.grey))),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFFC107),
-                      foregroundColor: Colors.black),
+                      backgroundColor: const Color(0xFF002147),
+                      foregroundColor: Colors.white),
                   onPressed: isPosting || uploadingCount > 0
                       ? null
                       : () async {
@@ -675,7 +675,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           height: 16,
                           child: CircularProgressIndicator(
                               color: Colors.black, strokeWidth: 2))
-                      : const Text('Post Announcement',
+                      : const Text('Publish Post',
                           style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ],
@@ -709,8 +709,7 @@ class _ProfilePageState extends State<ProfilePage> {
           toolbarHeight: 100,
           backgroundColor: const Color(0xFF002147),
           foregroundColor: Colors.white,
-          title: Image.network(
-              'https://raw.githubusercontent.com/username/repo/branch/CampusConnect_White_Logo.png',
+          title: Image.network('../assets/logo.png',
               height: 60,
               errorBuilder: (context, error, stackTrace) => const Text(
                   'CampusConnect',
@@ -816,19 +815,19 @@ class _ProfilePageState extends State<ProfilePage> {
                         children: [
                       Text(orgName,
                           style: const TextStyle(
-                              fontSize: 28, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 5),
-                      Text(
-                          '@${orgName.replaceAll(' ', '').toLowerCase()} • $_targetCollection',
-                          style:
-                              const TextStyle(color: Colors.grey, fontSize: 16))
+                              fontSize: 32, fontWeight: FontWeight.bold)),
+                      // const SizedBox(height: 5),
+                      // Text(
+                      //     '@${orgName.replaceAll(' ', '').toLowerCase()} • $_targetCollection',
+                      //     style:
+                      //         const TextStyle(color: Colors.grey, fontSize: 16))
                     ])),
                 OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF002147),
                         side: const BorderSide(color: Color(0xFF002147)),
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 15)),
+                            horizontal: 20, vertical: 10)),
                     onPressed: () => _showEditProfileDialog(
                         orgName, bio, logoText, headerUrl, profileImageUrl),
                     icon: const Icon(Icons.edit),
@@ -978,11 +977,11 @@ class _ProfilePageState extends State<ProfilePage> {
                             const SizedBox(height: 15),
                             Text(title,
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 16)),
+                                    fontWeight: FontWeight.bold, fontSize: 20)),
                             const SizedBox(height: 5),
                             Text(desc,
                                 style:
-                                    const TextStyle(fontSize: 15, height: 1.5),
+                                    const TextStyle(fontSize: 16, height: 1.5),
                                 maxLines: 3,
                                 overflow: TextOverflow.ellipsis),
                             if (imageUrls.isNotEmpty) ...[
@@ -1160,7 +1159,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     const SizedBox(height: 20),
                     Text(title,
                         style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 24)),
+                            fontWeight: FontWeight.bold, fontSize: 20)),
                     const SizedBox(height: 15),
                     Text(desc,
                         style: const TextStyle(fontSize: 16, height: 1.6)),

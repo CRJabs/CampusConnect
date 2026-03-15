@@ -52,20 +52,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 20),
           if (_isHomeTabActive) ...[
             _buildHeroCarousel(),
-            const SizedBox(height: 40),
-            const Text('Featured Announcements',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            const Text('Latest Announcements',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
             _buildLatestAnnouncementsSection(),
-            const SizedBox(height: 40),
-            const Text('Live Global Feed',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
+            const Divider(),
+            const SizedBox(height: 20),
+            // const Text(
+            //     '___________________________________________________________________________________________',
+            //     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            // const SizedBox(height: 20),
             _buildGlobalLiveFeed(),
           ] else ...[
-            const Text('Explore Directory',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
+            // const Text('Explore Directory',
+            //     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            // const SizedBox(height: 20),
             _buildDynamicListSection(context),
           ]
         ],
@@ -98,7 +101,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(25),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 4),
         decoration: BoxDecoration(
             color: isActive ? const Color(0xFF002147) : Colors.transparent,
             borderRadius: BorderRadius.circular(25)),
@@ -120,7 +123,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const SizedBox(
-                height: 350,
+                height: 500,
                 child: Center(
                     child:
                         CircularProgressIndicator(color: Color(0xFF002147))));
@@ -149,7 +152,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
           return CarouselSlider(
             options: CarouselOptions(
-                height: 350.0,
+                height: 500.0,
                 autoPlay: true,
                 autoPlayInterval: const Duration(seconds: 6),
                 enlargeCenterPage: true,
@@ -187,7 +190,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             color: Colors.white,
                             fontSize: 36,
                             fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 10),
+                    // const SizedBox(height: 5),
                     Text(cDesc,
                         style:
                             const TextStyle(color: Colors.white, fontSize: 18)),
@@ -220,9 +223,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         });
   }
 
-  // =========================================================================
-  // FIX: Converted back to an Expanded Row layout so cards stretch to fill screen
-  // =========================================================================
   Widget _buildLatestAnnouncementsSection() {
     return StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -260,7 +260,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             var slotData = displayDocs[i].data() as Map<String, dynamic>;
             String orgId = slotData['org_id'] ?? '';
             String orgName = slotData['org_name'] ?? 'Unknown Source';
-            int badgeColor = slotData['badge_color'] ?? 0xFF002147;
 
             Widget cardWidget = StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
@@ -270,30 +269,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     .limit(1)
                     .snapshots(),
                 builder: (context, postSnapshot) {
-                  if (!postSnapshot.hasData ||
-                      postSnapshot.data!.docs.isEmpty) {
-                    return _buildInfoCard(
-                        orgName,
-                        'Awaiting Announcements',
-                        'This organization has not published any recent updates.',
-                        Color(badgeColor),
-                        null);
-                  }
+                  // --- UPGRADED: Add FutureBuilder to fetch specific organization's profile picture ---
+                  return FutureBuilder<Map<String, dynamic>>(
+                      future: _fetchEntityData(orgId),
+                      builder: (context, entitySnapshot) {
+                        String? profileUrl;
+                        String logoText = "UB";
 
-                  var postData = postSnapshot.data!.docs.first.data()
-                      as Map<String, dynamic>;
-                  return _buildInfoCard(
-                      orgName,
-                      postData['title'] ?? 'No Title',
-                      postData['description'] ?? '',
-                      Color(badgeColor),
-                      postData);
+                        if (entitySnapshot.hasData &&
+                            entitySnapshot.data!.isNotEmpty) {
+                          profileUrl =
+                              entitySnapshot.data!['profile_image_url'];
+                          logoText = entitySnapshot.data!['logo_text'] ?? 'UB';
+                        }
+
+                        if (!postSnapshot.hasData ||
+                            postSnapshot.data!.docs.isEmpty) {
+                          return _buildInfoCard(
+                              orgName,
+                              'Awaiting Announcements',
+                              'This organization has not published any recent updates.',
+                              null,
+                              profileUrl,
+                              logoText);
+                        }
+
+                        var postData = postSnapshot.data!.docs.first.data()
+                            as Map<String, dynamic>;
+                        return _buildInfoCard(
+                            orgName,
+                            postData['title'] ?? 'No Title',
+                            postData['description'] ?? '',
+                            postData,
+                            profileUrl,
+                            logoText);
+                      });
                 });
 
-            // Wrap the card in Expanded so it fills the row dynamically
             rowChildren.add(Expanded(child: cardWidget));
 
-            // Add horizontal spacing between cards, but not after the very last card
             if (i < displayDocs.length - 1) {
               rowChildren.add(const SizedBox(width: 15));
             }
@@ -305,11 +319,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         });
   }
 
+  // --- UPGRADED: Removed badgeColor, added profileUrl and logoText parameters ---
   Widget _buildInfoCard(String source, String title, String desc,
-      Color badgeColor, Map<String, dynamic>? postData) {
+      Map<String, dynamic>? postData, String? profileUrl, String logoText) {
     return Container(
-      height: 230, // Maintain uniform height
-      // Removed fixed width so Expanded wrapper can stretch it
+      height: 230,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
           color: Colors.white,
@@ -318,15 +332,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-                color: badgeColor, borderRadius: BorderRadius.circular(20)),
-            child: Text(source,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold)),
+          // --- UPGRADED: Replaced colored pill with Avatar profile block ---
+          Row(
+            children: [
+              Container(
+                width: 35,
+                height: 35,
+                decoration: const BoxDecoration(
+                    color: Colors.white, shape: BoxShape.circle),
+                clipBehavior: Clip.antiAlias,
+                child: (profileUrl != null && profileUrl.trim().isNotEmpty)
+                    ? Image.network(profileUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (c, e, s) => Center(
+                            child: Text(
+                                logoText.isNotEmpty
+                                    ? logoText.substring(0, 1)
+                                    : 'U',
+                                style: const TextStyle(
+                                    color: Color(0xFF002147),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold))))
+                    : Center(
+                        child: Text(
+                            logoText.isNotEmpty
+                                ? logoText.substring(0, 1)
+                                : 'U',
+                            style: const TextStyle(
+                                color: Color(0xFF002147),
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold))),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(source,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                        fontSize: 13),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis),
+              ),
+            ],
           ),
           const SizedBox(height: 15),
           Text(title,
@@ -339,6 +386,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               maxLines: 2,
               overflow: TextOverflow.ellipsis),
           const Spacer(),
+
           if (postData != null)
             InkWell(
               onTap: () {
@@ -394,7 +442,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return const Center(
-              child: Text("No general announcements at this time.",
+              child: Text("No posts at this time.",
                   style: TextStyle(color: Colors.grey)));
         }
 
@@ -471,7 +519,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   width: 40,
                                   height: 40,
                                   decoration: const BoxDecoration(
-                                      color: Color(0xFF002147),
+                                      color: Colors.white,
                                       shape: BoxShape.circle),
                                   clipBehavior: Clip.antiAlias,
                                   child: (profileUrl != null &&
@@ -479,19 +527,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       ? Image.network(profileUrl,
                                           fit: BoxFit.cover,
                                           errorBuilder: (c, e, s) => Center(
-                                              child:
-                                                  Text(logoText.isNotEmpty ? logoText.substring(0, 1) : 'U',
-                                                      style: const TextStyle(
-                                                          color: Colors.white,
-                                                          fontSize: 14,
-                                                          fontWeight: FontWeight
-                                                              .bold))))
+                                              child: Text(logoText.isNotEmpty ? logoText.substring(0, 1) : 'U',
+                                                  style: const TextStyle(
+                                                      color: Color(0xFF002147),
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.bold))))
                                       : Center(
                                           child: Text(logoText.isNotEmpty ? logoText.substring(0, 1) : 'U',
                                               style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.bold))),
+                                                  color: Color(0xFF002147),
+                                                  fontSize: 15,
+                                                  fontWeight:
+                                                      FontWeight.bold))),
                                 ),
                                 const SizedBox(width: 10),
                                 Column(
@@ -510,11 +558,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             const SizedBox(height: 15),
                             Text(title,
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 16)),
+                                    fontWeight: FontWeight.bold, fontSize: 20)),
                             const SizedBox(height: 5),
                             Text(desc,
                                 style:
-                                    const TextStyle(fontSize: 15, height: 1.5),
+                                    const TextStyle(fontSize: 16, height: 1.5),
                                 maxLines: 3,
                                 overflow: TextOverflow.ellipsis),
                             if (imageUrls.isNotEmpty) ...[
@@ -670,23 +718,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 .orderBy('name')
                 .snapshots(),
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting)
+              if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Padding(
                     padding: EdgeInsets.all(40.0),
                     child: Center(
                         child: CircularProgressIndicator(
                             color: Color(0xFF002147))));
-              if (snapshot.hasError)
+              }
+              if (snapshot.hasError) {
                 return Padding(
                     padding: const EdgeInsets.all(40.0),
                     child: Center(child: Text('Error: ${snapshot.error}')));
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
+              }
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                 return Padding(
                     padding: const EdgeInsets.all(40.0),
                     child: Center(
                         child: Text('No data found in "$currentCollection".',
                             style: const TextStyle(color: Colors.grey))));
-
+              }
               final docs = snapshot.data!.docs;
 
               return ListView.separated(
@@ -711,7 +761,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       width: 45,
                       height: 45,
                       decoration: const BoxDecoration(
-                          color: Color(0xFF002147), shape: BoxShape.circle),
+                          color: Colors.white, shape: BoxShape.circle),
                       clipBehavior: Clip.antiAlias,
                       child: (profileUrl != null && profileUrl.trim().isNotEmpty)
                           ? Image.network(profileUrl,
@@ -722,7 +772,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                           ? logoText.substring(0, 4)
                                           : logoText,
                                       style: const TextStyle(
-                                          color: Colors.white,
+                                          color: Color(0xFF002147),
                                           fontSize: 12,
                                           fontWeight: FontWeight.bold))))
                           : Center(
@@ -731,7 +781,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       ? logoText.substring(0, 4)
                                       : logoText,
                                   style: const TextStyle(
-                                      color: Colors.white,
+                                      color: Color(0xFF002147),
                                       fontSize: 12,
                                       fontWeight: FontWeight.bold))),
                     ),
@@ -762,7 +812,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         FirebaseFirestore.instance
                             .collection(currentCollection)
                             .doc(docs[index].id)
-                            .update({'new_notices_count': 0});
+                            .update({'new_notices_count': 0}).catchError((e) =>
+                                debugPrint(
+                                    "Badge reset failed or blocked by rules."));
                       }
 
                       Navigator.push(

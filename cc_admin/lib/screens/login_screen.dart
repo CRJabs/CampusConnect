@@ -46,7 +46,9 @@ class _LoginScreenState extends State<LoginScreen> {
             Navigator.pushReplacement(context,
                 MaterialPageRoute(builder: (context) => const AdminPage()));
             return; // Stop execution here so we don't show the login screen
-          } else if (role == 'organization' || role == 'department') {
+          } else if (role == 'organization' ||
+              role == 'department' ||
+              role == 'administration') {
             Navigator.pushReplacement(context,
                 MaterialPageRoute(builder: (context) => const ProfilePage()));
             return;
@@ -109,7 +111,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (role == 'admin') {
         Navigator.pushReplacement(context,
             MaterialPageRoute(builder: (context) => const AdminPage()));
-      } else if (role == 'organization' || role == 'department') {
+      } else if (role == 'organization' ||
+          role == 'department' ||
+          role == 'administration') {
         Navigator.pushReplacement(context,
             MaterialPageRoute(builder: (context) => const ProfilePage()));
       } else {

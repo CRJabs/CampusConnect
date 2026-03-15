@@ -109,24 +109,23 @@ class _FAQScreenState extends State<FAQScreen> {
         children: [
           // --- UPGRADED: Replaced Text with Image Placeholder ---
           Image.asset(
-            'assets/logo.png',
+            'assets/faq.png',
             height: 100,
-            // errorBuilder: (context, error, stackTrace) => Container(
-            //   height: 100,
-            //   width: 400,
-            //   decoration: BoxDecoration(
-            //       color: Colors.grey.shade200,
-            //       borderRadius: BorderRadius.circular(12),
-            //       border: Border.all(color: Colors.grey.shade300)),
-            //   alignment: Alignment.center,
-            //   child: const Text('Add FAQ Banner Image Here',
-            //       style: TextStyle(
-            //           color: Colors.grey, fontWeight: FontWeight.bold)),
-            // ),
+            errorBuilder: (context, error, stackTrace) => Container(
+              height: 100,
+              width: 400,
+              decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade300)),
+              alignment: Alignment.center,
+              child: const Text('Add FAQ Banner Image Here',
+                  style: TextStyle(
+                      color: Colors.grey, fontWeight: FontWeight.bold)),
+            ),
           ),
           const SizedBox(height: 15),
-          const Text(
-              'Find answers to common questions about University of Bohol',
+          const Text('Find answers to your most common questions here!',
               style: TextStyle(color: Colors.grey)),
           const SizedBox(height: 40),
 
@@ -145,7 +144,8 @@ class _FAQScreenState extends State<FAQScreen> {
                 });
               },
               decoration: const InputDecoration(
-                  icon: Icon(Icons.search, color: Colors.grey),
+                  icon: Icon(Icons.search,
+                      color: Color.fromARGB(255, 201, 201, 201)),
                   hintText: 'Type your question here...',
                   border: InputBorder.none),
             ),

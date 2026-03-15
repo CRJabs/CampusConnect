@@ -21,10 +21,10 @@ class PostDetailScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: const Color(0xFF002147),
+        foregroundColor: Colors.white,
         elevation: 0,
-        title: const Text('Announcement Details',
+        title: const Text('Back to Dashboard',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
       ),
       body: SingleChildScrollView(
@@ -64,9 +64,14 @@ class PostDetailScreen extends StatelessWidget {
                 const SizedBox(height: 30),
                 Text(title,
                     style: const TextStyle(
-                        fontSize: 36, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 40),
-
+                        fontSize: 24, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 15),
+                Text(desc,
+                    style: const TextStyle(
+                        fontSize: 16,
+                        height: 1.8,
+                        fontWeight: FontWeight.w400)),
+                const SizedBox(height: 25),
                 // --- UPGRADED: Loops through all images and stacks them vertically ---
                 if (imageUrls.isNotEmpty) ...[
                   ...imageUrls.map((url) => Padding(
@@ -80,7 +85,6 @@ class PostDetailScreen extends StatelessWidget {
                       )),
                   const SizedBox(height: 20),
                 ],
-                Text(desc, style: const TextStyle(fontSize: 18, height: 1.8)),
               ],
             ),
           ),

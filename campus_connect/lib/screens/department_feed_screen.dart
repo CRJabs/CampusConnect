@@ -19,9 +19,9 @@ class DepartmentFeedScreen extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: const Color(0xFF002147),
+        color: Colors.white,
         shape: BoxShape.circle,
-        border: hasBorder ? Border.all(color: Colors.white, width: 5) : null,
+        border: hasBorder ? Border.all(color: Colors.white, width: 1) : null,
       ),
       clipBehavior: Clip.antiAlias,
       child: hasImage
@@ -158,10 +158,10 @@ class DepartmentFeedScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F2F5),
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: const Color(0xFF002147),
+        foregroundColor: Colors.white,
         elevation: 0,
         title: const Text('Back to Dashboard', style: TextStyle(fontSize: 16)),
       ),
@@ -171,11 +171,13 @@ class DepartmentFeedScreen extends StatelessWidget {
             .doc(orgId)
             .snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting)
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
                 child: CircularProgressIndicator(color: Color(0xFF002147)));
-          if (!snapshot.hasData || !snapshot.data!.exists)
+          }
+          if (!snapshot.hasData || !snapshot.data!.exists) {
             return const Center(child: Text('Profile not found.'));
+          }
 
           var data = snapshot.data!.data() as Map<String, dynamic>;
           String orgName = data['name'] ?? 'Unnamed Organization';
@@ -205,12 +207,12 @@ class DepartmentFeedScreen extends StatelessWidget {
                       clipBehavior: Clip.none,
                       children: [
                         Container(
-                          height: 250,
+                          height: 450,
                           width: double.infinity,
                           decoration: const BoxDecoration(
                               borderRadius: BorderRadius.vertical(
                                   top: Radius.circular(16)),
-                              color: Color(0xFF002147)),
+                              color: Colors.white),
                           clipBehavior: Clip.antiAlias,
                           child:
                               (headerUrl != null && headerUrl.trim().isNotEmpty)
@@ -228,7 +230,7 @@ class DepartmentFeedScreen extends StatelessWidget {
                             bottom: -50,
                             left: 40,
                             child: _buildStandardAvatar(
-                                profileImageUrl, logoText, 120, 32,
+                                profileImageUrl, logoText, 240, 64,
                                 hasBorder: true)),
                       ],
                     ),
@@ -240,13 +242,13 @@ class DepartmentFeedScreen extends StatelessWidget {
                         children: [
                           Text(orgName,
                               style: const TextStyle(
-                                  fontSize: 28, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 5),
-                          Text(
-                              '@${orgName.replaceAll(' ', '').toLowerCase()} • $collectionPath',
-                              style: const TextStyle(
-                                  color: Colors.grey, fontSize: 16)),
-                          const SizedBox(height: 20),
+                                  fontSize: 32, fontWeight: FontWeight.w900)),
+                          const SizedBox(height: 10),
+                          // Text(
+                          //     '@${orgName.replaceAll(' ', '').toLowerCase()} • $collectionPath',
+                          //     style: const TextStyle(
+                          //         color: Colors.grey, fontSize: 16)),
+                          // const SizedBox(height: 20),
                           Text(bio,
                               style:
                                   const TextStyle(fontSize: 16, height: 1.5)),
@@ -259,7 +261,7 @@ class DepartmentFeedScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Recent Announcements',
+                          const Text('Recent Activity',
                               style: TextStyle(
                                   fontSize: 18, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 20),
@@ -271,20 +273,21 @@ class DepartmentFeedScreen extends StatelessWidget {
                                 .snapshots(),
                             builder: (context, postSnapshot) {
                               if (postSnapshot.connectionState ==
-                                  ConnectionState.waiting)
+                                  ConnectionState.waiting) {
                                 return const Center(
                                     child: Padding(
                                         padding: EdgeInsets.all(20),
                                         child: CircularProgressIndicator()));
+                              }
                               if (!postSnapshot.hasData ||
-                                  postSnapshot.data!.docs.isEmpty)
+                                  postSnapshot.data!.docs.isEmpty) {
                                 return Container(
                                     padding: const EdgeInsets.all(40),
                                     alignment: Alignment.center,
                                     child: const Text(
-                                        "No announcements published yet.",
+                                        "No activity published yet.",
                                         style: TextStyle(color: Colors.grey)));
-
+                              }
                               // --- UPGRADED: Using ListView.builder for performance ---
                               return ListView.builder(
                                 shrinkWrap: true,
@@ -376,11 +379,11 @@ class DepartmentFeedScreen extends StatelessWidget {
                                             Text(title,
                                                 style: const TextStyle(
                                                     fontWeight: FontWeight.bold,
-                                                    fontSize: 16)),
+                                                    fontSize: 20)),
                                             const SizedBox(height: 5),
                                             Text(desc,
                                                 style: const TextStyle(
-                                                    fontSize: 15, height: 1.5),
+                                                    fontSize: 16, height: 1.5),
                                                 maxLines: 3,
                                                 overflow:
                                                     TextOverflow.ellipsis),

@@ -41,7 +41,7 @@ class _AdminPageState extends State<AdminPage> {
             children: [
               const SizedBox(width: 20),
               Image.network(
-                'https://raw.githubusercontent.com/username/repo/branch/CampusConnect_White_Logo.png',
+                '../assets/logo.png',
                 height: 40,
                 errorBuilder: (context, error, stackTrace) => const Text(
                     'CampusConnect Admin',
@@ -200,11 +200,12 @@ class _AdminPageState extends State<AdminPage> {
               stream:
                   FirebaseFirestore.instance.collection('users').snapshots(),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting)
+                if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
+                }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return const Center(child: Text('No accounts found.'));
-
+                }
                 return ListView.builder(
                   itemCount: snapshot.data!.docs.length,
                   itemBuilder: (context, index) {
@@ -603,9 +604,6 @@ class _AdminPageState extends State<AdminPage> {
         });
   }
 
-  // ==========================================
-  // TAB 2: DIRECTORY MANAGEMENT
-  // ==========================================
   Widget _buildDirectoryTab() {
     return StatefulBuilder(builder: (context, setTabState) {
       return Padding(
@@ -659,11 +657,13 @@ class _AdminPageState extends State<AdminPage> {
                       .orderBy('name')
                       .snapshots(),
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting)
+                    if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
-                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
+                    }
+                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                       return Center(
                           child: Text('No $_activeDirectoryTab found.'));
+                    }
                     return ListView.builder(
                       itemCount: snapshot.data!.docs.length,
                       itemBuilder: (context, index) {
@@ -686,8 +686,7 @@ class _AdminPageState extends State<AdminPage> {
                               width: 45,
                               height: 45,
                               decoration: const BoxDecoration(
-                                  color: Color(0xFF002147),
-                                  shape: BoxShape.circle),
+                                  color: Colors.white, shape: BoxShape.circle),
                               clipBehavior: Clip.antiAlias,
                               child: (profileUrl != null &&
                                       profileUrl.trim().isNotEmpty)
@@ -697,7 +696,7 @@ class _AdminPageState extends State<AdminPage> {
                                           child:
                                               Text(logoText.length > 4 ? logoText.substring(0, 4) : logoText,
                                                   style: const TextStyle(
-                                                      color: Colors.white,
+                                                      color: Color(0xFF002147),
                                                       fontSize: 12,
                                                       fontWeight:
                                                           FontWeight.bold))))
@@ -705,7 +704,7 @@ class _AdminPageState extends State<AdminPage> {
                                       child:
                                           Text(logoText.length > 4 ? logoText.substring(0, 4) : logoText,
                                               style: const TextStyle(
-                                                  color: Colors.white,
+                                                  color: Color(0xFF002147),
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.bold))),
                             ),
