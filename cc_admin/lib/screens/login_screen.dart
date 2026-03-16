@@ -16,7 +16,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
 
   bool _isLoading = false;
-  // NEW: State variable to hold the screen while we check for an active session
   bool _isCheckingSession = true;
 
   @override
@@ -25,11 +24,8 @@ class _LoginScreenState extends State<LoginScreen> {
     _checkExistingSession();
   }
 
-  // --- NEW: Session Logic ---
   Future<void> _checkExistingSession() async {
-    // A tiny delay ensures Firebase Web has time to read from the browser's local storage
     await Future.delayed(const Duration(milliseconds: 500));
-
     User? user = FirebaseAuth.instance.currentUser;
 
     if (user != null) {
@@ -45,7 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
           if (role == 'admin') {
             Navigator.pushReplacement(context,
                 MaterialPageRoute(builder: (context) => const AdminPage()));
-            return; // Stop execution here so we don't show the login screen
+            return;
           } else if (role == 'organization' ||
               role == 'department' ||
               role == 'administration') {
@@ -55,11 +51,10 @@ class _LoginScreenState extends State<LoginScreen> {
           }
         }
       } catch (e) {
-        // If there's an error checking the session, we silently fail and just let them log in manually.
+        // Silently fail
       }
     }
 
-    // If no user is found, stop checking and show the login form
     if (mounted) setState(() => _isCheckingSession = false);
   }
 
@@ -72,7 +67,6 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // 1. Authenticate the user
       UserCredential userCredential =
           await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
@@ -81,7 +75,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
       String uid = userCredential.user!.uid;
 
-      // 2. Fetch their role from Firestore
       DocumentSnapshot userDoc =
           await FirebaseFirestore.instance.collection('users').doc(uid).get();
 
@@ -92,20 +85,17 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      // --- NEW: RECORD LOGIN HISTORY ---
       await FirebaseFirestore.instance
           .collection('users')
           .doc(uid)
           .collection('login_history')
           .add({
         'timestamp': FieldValue.serverTimestamp(),
-        'device': 'Web Portal', // Can be expanded later
+        'device': 'Web Portal',
       });
-      // ---------------------------------
 
       String role = userDoc.get('role');
 
-      // 3. Route based on role
       if (!mounted) return;
 
       if (role == 'admin') {
@@ -140,7 +130,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // NEW: Show a loading spinner while checking for an existing session
     if (_isCheckingSession) {
       return const Scaffold(
         backgroundColor: Color(0xFFF8F9FA),
@@ -169,12 +158,10 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // --- NEW: Logo Image Implementation ---
-                // Try to load the image. If it fails (or URL is empty), fallback to the shield and text.
-                Image.network(
-                  '../assets/loginLogo.png', // Replace with your actual Logo Web Link!
-                  height:
-                      280, // Adjust this height based on the proportions of your logo
+                // --- OPTIMIZATION: Switched to Image.asset for local files ---
+                Image.asset(
+                  '../assets/loginLogo.png',
+                  height: 280,
                   errorBuilder: (context, error, stackTrace) => const Column(
                     children: [
                       CircleAvatar(
