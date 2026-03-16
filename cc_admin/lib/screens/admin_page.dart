@@ -115,7 +115,6 @@ class _AdminPageState extends State<AdminPage> {
                           style: TextStyle(
                               fontSize: 13, fontWeight: FontWeight.bold))
                     ])),
-                    // --- UPGRADED: Settings changed to FAQ ---
                     Tab(
                         child: Row(children: [
                       Icon(Icons.help_outline, size: 16),
@@ -177,7 +176,7 @@ class _AdminPageState extends State<AdminPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('User Accounts Control Panel',
+              const Text('Accounts Management',
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
@@ -296,7 +295,7 @@ class _AdminPageState extends State<AdminPage> {
                             : () => Navigator.pop(dialogContext))
                   ]),
               content: SizedBox(
-                width: 500,
+                width: 650,
                 child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -349,13 +348,14 @@ class _AdminPageState extends State<AdminPage> {
                               .orderBy('name')
                               .snapshots(),
                           builder: (context, snapshot) {
-                            if (!snapshot.hasData)
+                            if (!snapshot.hasData) {
                               return const LinearProgressIndicator();
+                            }
+
                             return DropdownButtonFormField<String>(
                               value: selectedTargetId,
                               decoration: InputDecoration(
-                                  labelText:
-                                      'Link to specific ${selectedRole.toUpperCase()}',
+                                  labelText: ' ${selectedRole.toUpperCase()}',
                                   border: const OutlineInputBorder()),
                               items: snapshot.data!.docs
                                   .map((doc) => DropdownMenuItem(
@@ -379,8 +379,9 @@ class _AdminPageState extends State<AdminPage> {
                   onPressed: isSaving
                       ? null
                       : () async {
-                          if (emailCtrl.text.isEmpty || passCtrl.text.isEmpty)
+                          if (emailCtrl.text.isEmpty || passCtrl.text.isEmpty) {
                             return;
+                          }
                           if (selectedRole != 'admin' &&
                               selectedTargetId == null) {
                             ScaffoldMessenger.of(dialogContext).showSnackBar(
@@ -788,7 +789,7 @@ class _AdminPageState extends State<AdminPage> {
           return StatefulBuilder(builder: (context, setDialogState) {
             return AlertDialog(
               backgroundColor: Colors.white,
-              title: Text('Add to $collection Directory'),
+              title: Text('Add as new $collection'),
               content: SizedBox(
                 width: 400,
                 child: Column(
@@ -797,15 +798,15 @@ class _AdminPageState extends State<AdminPage> {
                     TextField(
                         controller: nameCtrl,
                         decoration: const InputDecoration(
-                            labelText: 'Full Entity Name',
+                            labelText: 'Full Name',
                             border: OutlineInputBorder())),
                     const SizedBox(height: 15),
                     TextField(
                         controller: logoCtrl,
                         decoration: const InputDecoration(
-                            labelText: 'Fallback Initials (Max 4)',
+                            labelText: 'Acronym (Max 6)',
                             border: OutlineInputBorder()),
-                        maxLength: 4),
+                        maxLength: 6),
                   ],
                 ),
               ),
@@ -855,7 +856,7 @@ class _AdminPageState extends State<AdminPage> {
           return StatefulBuilder(builder: (context, setDialogState) {
             return AlertDialog(
               backgroundColor: Colors.white,
-              title: const Text('Edit Entity Name'),
+              title: const Text('Edit Name'),
               content: TextField(
                   controller: nameCtrl,
                   decoration: const InputDecoration(
@@ -905,7 +906,7 @@ class _AdminPageState extends State<AdminPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Featured Highlights (Carousel)',
+              const Text('Carousel Highlights',
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
@@ -929,14 +930,15 @@ class _AdminPageState extends State<AdminPage> {
                 .orderBy('timestamp', descending: true)
                 .snapshots(),
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting)
+              if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
+              }
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                 return const Padding(
                     padding: EdgeInsets.all(20),
                     child: Text(
                         'No highlights found. They will fallback to default if empty.'));
-
+              }
               return ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -1001,13 +1003,13 @@ class _AdminPageState extends State<AdminPage> {
             },
           ),
           const SizedBox(height: 60),
-          const Text('Featured Announcements (Dashboard Cards)',
+          const Text('Featured Announcements',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
-          const Text(
-              'Select exactly 6 accounts. The system will automatically display their single most recent post on the Dashboard.',
-              style: TextStyle(color: Colors.grey, fontSize: 14)),
-          const SizedBox(height: 20),
+          // const Text(
+          //     'Select exactly 6 accounts. The system will automatically display their single most recent post on the Dashboard.',
+          //     style: TextStyle(color: Colors.grey, fontSize: 14)),
+          // const SizedBox(height: 20),
           const Divider(),
           const SizedBox(height: 20),
           ...List.generate(6, (index) {
@@ -1018,11 +1020,11 @@ class _AdminPageState extends State<AdminPage> {
                     .doc(slotId)
                     .snapshots(),
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting)
+                  if (snapshot.connectionState == ConnectionState.waiting) {
                     return const SizedBox(
                         height: 70,
                         child: Center(child: LinearProgressIndicator()));
-
+                  }
                   bool isConfigured = snapshot.hasData && snapshot.data!.exists;
                   var data = isConfigured
                       ? snapshot.data!.data() as Map<String, dynamic>
@@ -1151,9 +1153,9 @@ class _AdminPageState extends State<AdminPage> {
                           .orderBy('name')
                           .snapshots(),
                       builder: (context, snapshot) {
-                        if (!snapshot.hasData)
+                        if (!snapshot.hasData) {
                           return const LinearProgressIndicator();
-
+                        }
                         bool idExists = snapshot.data!.docs
                             .any((doc) => doc.id == selectedOrgId);
                         if (!idExists) {
@@ -1217,8 +1219,10 @@ class _AdminPageState extends State<AdminPage> {
                   onPressed: isSaving
                       ? null
                       : () async {
-                          if (selectedOrgId == null || selectedOrgName == null)
+                          if (selectedOrgId == null ||
+                              selectedOrgName == null) {
                             return;
+                          }
                           setDialogState(() => isSaving = true);
 
                           await FirebaseFirestore.instance
@@ -1339,16 +1343,16 @@ class _AdminPageState extends State<AdminPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('1. Dashboard Carousel Display',
+                      const Text('1. Carousel Display',
                           style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                               color: Color(0xFF002147))),
                       const SizedBox(height: 10),
-                      const Text(
-                          'This is what users see scrolling on the main dashboard.',
-                          style: TextStyle(color: Colors.grey, fontSize: 12)),
-                      const SizedBox(height: 15),
+                      // const Text(
+                      //     'This is what users see scrolling on the main dashboard.',
+                      //     style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      // const SizedBox(height: 15),
                       TextField(
                           controller: carouselTitleCtrl,
                           decoration: const InputDecoration(
@@ -1393,20 +1397,20 @@ class _AdminPageState extends State<AdminPage> {
                       const SizedBox(height: 30),
                       const Divider(),
                       const SizedBox(height: 30),
-                      const Text('2. Detailed Post View',
+                      const Text('2. Post Details',
                           style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                               color: Color(0xFF002147))),
                       const SizedBox(height: 10),
-                      const Text(
-                          'This is what opens when a user clicks "View Details".',
-                          style: TextStyle(color: Colors.grey, fontSize: 12)),
-                      const SizedBox(height: 15),
+                      // const Text(
+                      //     'This is what opens when a user clicks "View Details".',
+                      //     style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      // const SizedBox(height: 15),
                       TextField(
                           controller: postTitleCtrl,
                           decoration: const InputDecoration(
-                              labelText: 'Detailed Post Heading',
+                              labelText: 'Post Heading',
                               border: OutlineInputBorder())),
                       const SizedBox(height: 15),
                       TextField(
@@ -1444,8 +1448,7 @@ class _AdminPageState extends State<AdminPage> {
                                   onPressed: () => handleImageUpload(false),
                                   icon: const Icon(Icons.add_photo_alternate,
                                       size: 18),
-                                  label: const Text(
-                                      'Upload Detailed Image (Optional)'))),
+                                  label: const Text('Upload Image'))),
                     ],
                   ),
                 ),
@@ -1538,7 +1541,7 @@ class _AdminPageState extends State<AdminPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Assistance Center (FAQ) Manager',
+              const Text('Assistance Center',
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
@@ -1549,7 +1552,7 @@ class _AdminPageState extends State<AdminPage> {
                 onPressed: () =>
                     _showAnswerFaqDialog(null, null), // Add manual FAQ
                 icon: const Icon(Icons.add_comment),
-                label: const Text('Add FAQ Manually',
+                label: const Text('Add FAQ',
                     style: TextStyle(fontWeight: FontWeight.bold)),
               )
             ],
@@ -1576,7 +1579,7 @@ class _AdminPageState extends State<AdminPage> {
                                       : Colors.transparent,
                                   width: 3))),
                       child: Center(
-                          child: Text('Pending Questions (Blank)',
+                          child: Text('Pending Questions',
                               style: TextStyle(
                                   fontWeight: !_isShowingAnsweredFaqs
                                       ? FontWeight.bold
