@@ -1,13 +1,13 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'login_screen.dart';
 
 import '../widgets/create_post_dialog.dart';
 import '../widgets/edit_profile_dialog.dart';
 import '../utils/admin_dialogs.dart';
-import '../widgets/avatar_widget.dart'; // --- NEW AVATAR WIDGET ---
+import '../widgets/avatar_widget.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -81,11 +81,11 @@ class _ProfilePageState extends State<ProfilePage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF0F2F5),
       appBar: AppBar(
-          toolbarHeight: 100,
+          toolbarHeight: 75,
           backgroundColor: const Color(0xFF002147),
           foregroundColor: Colors.white,
-          title: Image.asset('../assets/logo.png',
-              height: 60,
+          title: Image.asset('assets/logo.png',
+              height: 45,
               errorBuilder: (context, error, stackTrace) => const Text(
                   'CampusConnect',
                   style: TextStyle(fontWeight: FontWeight.bold))),
@@ -111,34 +111,70 @@ class _ProfilePageState extends State<ProfilePage> {
           String bio = data['bio'] ?? 'Bio not set up yet.';
           String? headerUrl = data['header_image_url'];
           String? profileImageUrl = data['profile_image_url'];
+          String? bgImageUrl = data['bg_image_url'];
 
-          return SingleChildScrollView(
-            child: Center(
-              child: Container(
-                width: 1600,
-                margin:
-                    const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
-                decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey.shade300),
-                    boxShadow: const [
-                      BoxShadow(color: Colors.black12, blurRadius: 10)
-                    ]),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildProfileHeader(headerUrl, logoText, profileImageUrl),
-                    _buildBioSection(
-                        orgName, bio, logoText, headerUrl, profileImageUrl),
-                    const Divider(thickness: 8, color: Color(0xFFF0F2F5)),
-                    _buildCreatePostSection(logoText, profileImageUrl),
-                    const Divider(thickness: 1, color: Color(0xFFF0F2F5)),
-                    _buildRecentPostsFeed(orgName, logoText, profileImageUrl),
-                  ],
+          return Stack(
+            children: [
+              if (bgImageUrl != null && bgImageUrl.isNotEmpty)
+                Positioned.fill(
+                  child: Image.network(
+                    bgImageUrl,
+                    fit: BoxFit.cover,
+                    cacheWidth: 1920,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(color: const Color(0xFFF0F2F5));
+                    },
+                    errorBuilder: (c, e, s) =>
+                        Container(color: const Color(0xFFF0F2F5)),
+                  ),
+                ),
+              if (bgImageUrl != null && bgImageUrl.isNotEmpty)
+                Positioned.fill(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 25.0, sigmaY: 25.0),
+                    child: Container(
+                      color: Colors.black.withOpacity(0.15),
+                    ),
+                  ),
+                ),
+              Positioned.fill(
+                child: SingleChildScrollView(
+                  child: Center(
+                    child: Container(
+                      width: 1080,
+                      margin: const EdgeInsets.symmetric(
+                          vertical: 40, horizontal: 20),
+                      decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.grey.shade300),
+                          boxShadow: const [
+                            BoxShadow(color: Colors.black12, blurRadius: 10)
+                          ]),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildProfileHeader(
+                              headerUrl, logoText, profileImageUrl),
+                          _buildBioSection(orgName, bio, logoText, headerUrl,
+                              profileImageUrl, bgImageUrl),
+                          const Divider(thickness: 8, color: Color(0xFFF0F2F5)),
+                          _buildCreatePostSection(logoText, profileImageUrl),
+                          const Divider(thickness: 1, color: Color(0xFFF0F2F5)),
+                          RecentPostsFeed(
+                            targetId: _targetId!,
+                            orgName: orgName,
+                            logoText: logoText,
+                            profileImageUrl: profileImageUrl,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           );
         },
       ),
@@ -155,15 +191,18 @@ class _ProfilePageState extends State<ProfilePage> {
           decoration: const BoxDecoration(
               borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
               color: Color(0xFF002147)),
-          clipBehavior: Clip.antiAlias,
           child: hasHeader
-              ? Stack(fit: StackFit.expand, children: [
-                  Image.network(headerUrl,
-                      fit: BoxFit.cover,
-                      cacheWidth: 1600,
-                      errorBuilder: (c, e, s) => const SizedBox()),
-                  Container(color: Colors.black.withOpacity(0.3))
-                ])
+              ? ClipRRect(
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(16)),
+                  child: Stack(fit: StackFit.expand, children: [
+                    Image.network(headerUrl,
+                        fit: BoxFit.cover,
+                        cacheWidth: 1600,
+                        errorBuilder: (c, e, s) => const SizedBox()),
+                    Container(color: Colors.black.withOpacity(0.3))
+                  ]),
+                )
               : null),
       Positioned(
           bottom: -50,
@@ -178,7 +217,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildBioSection(String orgName, String bio, String logoText,
-      String? headerUrl, String? profileImageUrl) {
+      String? headerUrl, String? profileImageUrl, String? bgImageUrl) {
     return Padding(
         padding:
             const EdgeInsets.only(top: 60, left: 40, right: 40, bottom: 30),
@@ -212,6 +251,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               currentLogo: logoText,
                               currentHeaderUrl: headerUrl,
                               currentProfileUrl: profileImageUrl,
+                              currentBgUrl: bgImageUrl,
                             )),
                     icon: const Icon(Icons.edit),
                     label: const Text('Edit Profile Details',
@@ -257,9 +297,31 @@ class _ProfilePageState extends State<ProfilePage> {
           ])
         ]));
   }
+}
 
-  Widget _buildRecentPostsFeed(
-      String orgName, String logoText, String? profileImageUrl) {
+class RecentPostsFeed extends StatefulWidget {
+  final String targetId;
+  final String orgName;
+  final String logoText;
+  final String? profileImageUrl;
+
+  const RecentPostsFeed({
+    super.key,
+    required this.targetId,
+    required this.orgName,
+    required this.logoText,
+    this.profileImageUrl,
+  });
+
+  @override
+  State<RecentPostsFeed> createState() => _RecentPostsFeedState();
+}
+
+class _RecentPostsFeedState extends State<RecentPostsFeed> {
+  int _postLimit = 10;
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(40),
       child: Column(
@@ -271,12 +333,13 @@ class _ProfilePageState extends State<ProfilePage> {
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('organization_notices')
-                .where('org_id', isEqualTo: _targetId)
+                .where('org_id', isEqualTo: widget.targetId)
                 .orderBy('timestamp', descending: true)
-                .limit(30)
+                .limit(_postLimit)
                 .snapshots(),
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting)
+              if (snapshot.connectionState == ConnectionState.waiting &&
+                  _postLimit == 10)
                 return const Center(
                     child: Padding(
                         padding: EdgeInsets.all(20),
@@ -290,105 +353,138 @@ class _ProfilePageState extends State<ProfilePage> {
 
               final posts = snapshot.data!.docs;
 
-              return ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: posts.length,
-                itemBuilder: (context, index) {
-                  var post = posts[index];
-                  var postData = post.data() as Map<String, dynamic>;
-                  String title = postData['title'] ?? 'No Title';
-                  String desc = postData['description'] ?? '';
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: posts.length,
+                    itemBuilder: (context, index) {
+                      var post = posts[index];
+                      var postData = post.data() as Map<String, dynamic>;
+                      String title = postData['title'] ?? 'No Title';
+                      String desc = postData['description'] ?? '';
 
-                  List<String> imageUrls = [];
-                  if (postData.containsKey('image_urls') &&
-                      postData['image_urls'] is List)
-                    imageUrls = List<String>.from(postData['image_urls']);
-                  else if (postData.containsKey('image_url') &&
-                      postData['image_url'] != null &&
-                      postData['image_url'].isNotEmpty)
-                    imageUrls = [postData['image_url']];
+                      List<String> imageUrls = [];
+                      if (postData.containsKey('image_urls') &&
+                          postData['image_urls'] is List)
+                        imageUrls = List<String>.from(postData['image_urls']);
+                      else if (postData.containsKey('image_url') &&
+                          postData['image_url'] != null &&
+                          postData['image_url'].isNotEmpty)
+                        imageUrls = [postData['image_url']];
 
-                  String timeText = 'Recently';
-                  if (postData['timestamp'] != null) {
-                    DateTime date =
-                        (postData['timestamp'] as Timestamp).toDate();
-                    timeText = "${date.month}/${date.day}/${date.year}";
-                  }
+                      String timeText = 'Recently';
+                      if (postData['timestamp'] != null) {
+                        DateTime date =
+                            (postData['timestamp'] as Timestamp).toDate();
+                        timeText = "${date.month}/${date.day}/${date.year}";
+                      }
 
-                  return Card(
-                    color: Colors.white,
-                    surfaceTintColor: Colors.transparent,
-                    elevation: 0,
-                    margin: const EdgeInsets.only(bottom: 20),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side:
-                            BorderSide(color: Colors.grey.shade200, width: 1)),
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      onTap: () => _showPostDetailsDialog(
-                          title,
-                          desc,
-                          imageUrls,
-                          orgName,
-                          logoText,
-                          profileImageUrl,
-                          timeText),
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(children: [
-                              AvatarWidget(
-                                  imageUrl: profileImageUrl,
-                                  logoText: logoText,
-                                  size: 40,
-                                  fontSize: 14),
-                              const SizedBox(width: 10),
-                              Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(orgName,
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                    Text(timeText,
-                                        style: const TextStyle(
-                                            color: Colors.grey, fontSize: 12))
-                                  ]),
-                              const Spacer(),
-                              IconButton(
-                                  icon: const Icon(Icons.delete_outline,
-                                      color: Colors.red),
-                                  onPressed: () => AdminDialogs.confirmDelete(
-                                          context, "Post: $title", () {
-                                        FirebaseFirestore.instance
-                                            .collection('organization_notices')
-                                            .doc(post.id)
-                                            .delete();
-                                      }))
-                            ]),
-                            const SizedBox(height: 15),
-                            Text(title,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 20)),
-                            const SizedBox(height: 5),
-                            Text(desc,
-                                style:
-                                    const TextStyle(fontSize: 16, height: 1.5),
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis),
-                            if (imageUrls.isNotEmpty) ...[
-                              const SizedBox(height: 15),
-                              _buildPostImageFeedGrid(imageUrls),
-                            ]
-                          ],
+                      return Card(
+                        color: Colors.white,
+                        surfaceTintColor: Colors.transparent,
+                        elevation: 0,
+                        margin: const EdgeInsets.only(bottom: 20),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(
+                                color: Colors.grey.shade200, width: 1)),
+                        child: InkWell(
+                          onTap: () => _showPostDetailsDialog(
+                              title,
+                              desc,
+                              imageUrls,
+                              widget.orgName,
+                              widget.logoText,
+                              widget.profileImageUrl,
+                              timeText),
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(children: [
+                                  AvatarWidget(
+                                      imageUrl: widget.profileImageUrl,
+                                      logoText: widget.logoText,
+                                      size: 40,
+                                      fontSize: 14),
+                                  const SizedBox(width: 10),
+                                  Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(widget.orgName,
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold)),
+                                        Text(timeText,
+                                            style: const TextStyle(
+                                                color: Colors.grey,
+                                                fontSize: 12))
+                                      ]),
+                                  const Spacer(),
+                                  IconButton(
+                                      icon: const Icon(Icons.delete_outline,
+                                          color: Colors.red),
+                                      onPressed: () =>
+                                          AdminDialogs.confirmDelete(
+                                              context, "Post: $title", () {
+                                            FirebaseFirestore.instance
+                                                .collection(
+                                                    'organization_notices')
+                                                .doc(post.id)
+                                                .delete();
+                                          }))
+                                ]),
+                                const SizedBox(height: 15),
+                                Text(title,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 20)),
+                                const SizedBox(height: 5),
+                                Text(desc,
+                                    style: const TextStyle(
+                                        fontSize: 16, height: 1.5),
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis),
+                                if (imageUrls.isNotEmpty) ...[
+                                  const SizedBox(height: 15),
+                                  _buildPostImageFeedGrid(imageUrls),
+                                ]
+                              ],
+                            ),
+                          ),
                         ),
+                      );
+                    },
+                  ),
+                  if (posts.length >= _postLimit)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10, bottom: 20),
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF002147),
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          side: BorderSide(color: Colors.grey.shade300),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _postLimit += 10;
+                          });
+                        },
+                        icon: const Icon(Icons.expand_more),
+                        label: const Text('Load More Posts',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 16)),
                       ),
-                    ),
-                  );
-                },
+                    )
+                ],
               );
             },
           ),
@@ -398,106 +494,126 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildPostImageFeedGrid(List<String> imageUrls) {
-    int imageCount = imageUrls.length;
-    ClipRRect gridImage(String url) => ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Image.network(url,
-            height: double.infinity,
-            width: double.infinity,
-            fit: BoxFit.cover,
-            cacheWidth: 500,
-            errorBuilder: (c, e, s) =>
-                const Center(child: Icon(Icons.broken_image))));
+    int count = imageUrls.length;
 
-    if (imageCount == 1)
-      return AspectRatio(aspectRatio: 16 / 9, child: gridImage(imageUrls[0]));
-    else if (imageCount == 2)
+    // --- UX OPTIMIZATION: Progressive Loading Indicator for 100% Quality Images ---
+    Widget buildNetworkImage(String url, BoxFit fit) {
+      return Image.network(
+        url,
+        fit: fit,
+        width: double.infinity,
+        height: double.infinity,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
+            color: Colors.grey.shade100,
+            child: Center(
+              child: CircularProgressIndicator(
+                color: const Color(0xFF002147),
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded /
+                        (loadingProgress.expectedTotalBytes ?? 1)
+                    : null,
+              ),
+            ),
+          );
+        },
+        errorBuilder: (c, e, s) =>
+            const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
+      );
+    }
+
+    if (count == 1) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          double maxWidth = constraints.maxWidth;
+
+          return ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: maxWidth / 1.78,
+              maxHeight: maxWidth / 1.0,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                color: Colors.grey.shade900,
+                width: double.infinity,
+                child: buildNetworkImage(imageUrls[0], BoxFit.contain),
+              ),
+            ),
+          );
+        },
+      );
+    }
+
+    if (count == 2) {
       return AspectRatio(
-          aspectRatio: 16 / 9,
-          child: StaggeredGrid.count(
-              crossAxisCount: 2,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
+        aspectRatio: 16 / 9,
+        child: Row(
+          children: [
+            Expanded(
+                child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: buildNetworkImage(imageUrls[0], BoxFit.cover))),
+            const SizedBox(width: 8),
+            Expanded(
+                child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: buildNetworkImage(imageUrls[1], BoxFit.cover))),
+          ],
+        ),
+      );
+    }
+
+    return AspectRatio(
+      aspectRatio: 16 / 9,
+      child: Row(
+        children: [
+          Expanded(
+            flex: 1,
+            child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: buildNetworkImage(imageUrls[0], BoxFit.cover)),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 1,
+            child: Column(
               children: [
-                StaggeredGridTile.count(
-                    crossAxisCellCount: 1,
-                    mainAxisCellCount: 1,
-                    child: gridImage(imageUrls[0])),
-                StaggeredGridTile.count(
-                    crossAxisCellCount: 1,
-                    mainAxisCellCount: 1,
-                    child: gridImage(imageUrls[1]))
-              ]));
-    else if (imageCount == 3)
-      return AspectRatio(
-          aspectRatio: 16 / 9,
-          child: StaggeredGrid.count(
-              crossAxisCount: 3,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              children: [
-                StaggeredGridTile.count(
-                    crossAxisCellCount: 1,
-                    mainAxisCellCount: 1,
-                    child: gridImage(imageUrls[0])),
-                StaggeredGridTile.count(
-                    crossAxisCellCount: 1,
-                    mainAxisCellCount: 1,
-                    child: gridImage(imageUrls[1])),
-                StaggeredGridTile.count(
-                    crossAxisCellCount: 1,
-                    mainAxisCellCount: 1,
-                    child: gridImage(imageUrls[2]))
-              ]));
-    else
-      return AspectRatio(
-          aspectRatio: 16 / 9,
-          child: StaggeredGrid.count(
-              crossAxisCount: 4,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              children: [
-                StaggeredGridTile.count(
-                    crossAxisCellCount: 2,
-                    mainAxisCellCount: 2,
-                    child: gridImage(imageUrls[0])),
-                StaggeredGridTile.count(
-                    crossAxisCellCount: 2,
-                    mainAxisCellCount: 1,
-                    child: StaggeredGrid.count(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 8,
-                        crossAxisSpacing: 8,
-                        children: [
-                          StaggeredGridTile.count(
-                              crossAxisCellCount: 1,
-                              mainAxisCellCount: 1,
-                              child: gridImage(imageUrls[1])),
-                          StaggeredGridTile.count(
-                              crossAxisCellCount: 1,
-                              mainAxisCellCount: 1,
-                              child: gridImage(imageUrls[2]))
-                        ])),
-                StaggeredGridTile.count(
-                    crossAxisCellCount: 2,
-                    mainAxisCellCount: 1,
-                    child: Stack(children: [
-                      gridImage(imageUrls[3]),
-                      if (imageCount > 4) ...[
-                        Positioned.fill(
-                            child: Container(
-                                decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.5),
-                                    borderRadius: BorderRadius.circular(8)),
-                                child: Center(
-                                    child: Text('+${imageCount - 3}',
-                                        style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 32,
-                                            fontWeight: FontWeight.bold)))))
-                      ]
-                    ]))
-              ]));
+                Expanded(
+                    child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: buildNetworkImage(imageUrls[1], BoxFit.cover))),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        buildNetworkImage(imageUrls[2], BoxFit.cover),
+                        if (count > 3)
+                          Container(
+                            color: Colors.black.withOpacity(0.6),
+                            alignment: Alignment.center,
+                            child: Text(
+                              '+${count - 3}',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          )
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showPostDetailsDialog(
@@ -564,6 +680,29 @@ class _ProfilePageState extends State<ProfilePage> {
                               child: Image.network(url,
                                   fit: BoxFit.contain,
                                   width: double.infinity,
+                                  // Adds smooth progress spinner inside the clicked popup too!
+                                  loadingBuilder:
+                                      (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return Container(
+                                      height: 300,
+                                      color: Colors.grey.shade100,
+                                      child: Center(
+                                        child: CircularProgressIndicator(
+                                          color: const Color(0xFF002147),
+                                          value: loadingProgress
+                                                      .expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                      .cumulativeBytesLoaded /
+                                                  (loadingProgress
+                                                          .expectedTotalBytes ??
+                                                      1)
+                                              : null,
+                                        ),
+                                      ),
+                                    );
+                                  },
                                   errorBuilder: (c, e, s) =>
                                       const SizedBox())))),
                     ]

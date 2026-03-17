@@ -126,8 +126,9 @@ class _FaqTabState extends State<FaqTab> with AutomaticKeepAliveClientMixin {
             child: StreamBuilder<QuerySnapshot>(
               stream: _faqStream,
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting)
+                if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
+                }
 
                 if (snapshot.hasError) {
                   return Center(

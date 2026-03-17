@@ -31,7 +31,7 @@ class AdminPage extends StatelessWidget {
           title: Row(
             children: [
               const SizedBox(width: 20),
-              Image.asset('../assets/logo.png',
+              Image.asset('assets/logo.png',
                   height: 40,
                   errorBuilder: (context, error, stackTrace) => const Text(
                       'CampusConnect Admin',

@@ -10,6 +10,7 @@ class EditProfileDialog extends StatefulWidget {
   final String currentLogo;
   final String? currentHeaderUrl;
   final String? currentProfileUrl;
+  final String? currentBgUrl; // --- NEW: Added Background URL Parameter ---
 
   const EditProfileDialog({
     super.key,
@@ -20,6 +21,7 @@ class EditProfileDialog extends StatefulWidget {
     required this.currentLogo,
     this.currentHeaderUrl,
     this.currentProfileUrl,
+    this.currentBgUrl,
   });
 
   @override
@@ -34,9 +36,12 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
 
   String? _finalProfileUrl;
   String? _finalHeaderUrl;
+  String? _finalBgUrl; // --- NEW: Track new background ---
+
   bool _isSaving = false;
   bool _isUploadingProfile = false;
   bool _isUploadingHeader = false;
+  bool _isUploadingBg = false;
 
   @override
   void initState() {
@@ -46,6 +51,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     _logoCtrl = TextEditingController(text: widget.currentLogo);
     _finalProfileUrl = widget.currentProfileUrl;
     _finalHeaderUrl = widget.currentHeaderUrl;
+    _finalBgUrl = widget.currentBgUrl;
   }
 
   @override
@@ -56,12 +62,19 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     super.dispose();
   }
 
-  Future<void> _handleUpload(bool isProfileImage) async {
-    setState(() => isProfileImage
-        ? _isUploadingProfile = true
-        : _isUploadingHeader = true);
+  // --- UPDATED: Takes an integer to handle 3 different upload targets ---
+  Future<void> _handleUpload(int imageType) async {
+    setState(() {
+      if (imageType == 0)
+        _isUploadingProfile = true;
+      else if (imageType == 1)
+        _isUploadingHeader = true;
+      else
+        _isUploadingBg = true;
+    });
 
-    String fileName = isProfileImage ? 'profile' : 'header';
+    String fileName =
+        imageType == 0 ? 'profile' : (imageType == 1 ? 'header' : 'background');
     String storagePath =
         '${widget.targetCollection}/${widget.targetId}/${fileName}_${DateTime.now().millisecondsSinceEpoch}.jpg';
 
@@ -70,17 +83,24 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
 
     if (uploadedUrl != null && mounted) {
       setState(() {
-        if (isProfileImage)
+        if (imageType == 0)
           _finalProfileUrl = uploadedUrl;
-        else
+        else if (imageType == 1)
           _finalHeaderUrl = uploadedUrl;
+        else
+          _finalBgUrl = uploadedUrl;
       });
     }
 
     if (mounted) {
-      setState(() => isProfileImage
-          ? _isUploadingProfile = false
-          : _isUploadingHeader = false);
+      setState(() {
+        if (imageType == 0)
+          _isUploadingProfile = false;
+        else if (imageType == 1)
+          _isUploadingHeader = false;
+        else
+          _isUploadingBg = false;
+      });
     }
   }
 
@@ -176,7 +196,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                                             backgroundColor:
                                                 const Color(0xFF002147),
                                             foregroundColor: Colors.white),
-                                        onPressed: () => _handleUpload(true),
+                                        onPressed: () => _handleUpload(0),
                                         icon:
                                             const Icon(Icons.upload, size: 18),
                                         label: const Text('Change Photo'))
@@ -212,14 +232,51 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                                 style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF002147),
                                     foregroundColor: Colors.white),
-                                onPressed: () => _handleUpload(false),
+                                onPressed: () => _handleUpload(1),
                                 icon: const Icon(Icons.add_photo_alternate,
                                     size: 18),
                                 label: const Text('Upload New Banner'))),
+                    const SizedBox(height: 30),
+
+                    // --- NEW: Background Image Upload ---
+                    const Text('Page Background Image (Max 50MB)',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 10),
+                    Container(
+                        height: 120,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                            color: Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.shade300)),
+                        clipBehavior: Clip.antiAlias,
+                        child: (_finalBgUrl != null && _finalBgUrl!.isNotEmpty)
+                            ? Image.network(_finalBgUrl!,
+                                fit: BoxFit.cover,
+                                cacheWidth: 800,
+                                errorBuilder: (c, e, s) => const Center(
+                                    child: Icon(Icons.broken_image)))
+                            : const Center(
+                                child: Icon(Icons.wallpaper,
+                                    color: Colors.grey, size: 40))),
+                    const SizedBox(height: 10),
+                    Center(
+                        child: _isUploadingBg
+                            ? const CircularProgressIndicator()
+                            : ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF002147),
+                                    foregroundColor: Colors.white),
+                                onPressed: () => _handleUpload(2),
+                                icon: const Icon(Icons.add_photo_alternate,
+                                    size: 18),
+                                label: const Text('Upload Background'))),
                     const SizedBox(height: 10),
                     const Center(
-                        child: Text('Recommended 16:9 aspect ratio',
-                            style: TextStyle(color: Colors.grey, fontSize: 12)))
+                        child: Text(
+                            'This image will be blurred automatically in the background.',
+                            style:
+                                TextStyle(color: Colors.grey, fontSize: 12))),
                   ])))),
       actions: [
         SizedBox(
@@ -233,7 +290,8 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                         borderRadius: BorderRadius.circular(8))),
                 onPressed: _isSaving ||
                         _isUploadingProfile ||
-                        _isUploadingHeader
+                        _isUploadingHeader ||
+                        _isUploadingBg
                     ? null
                     : () async {
                         if (_formKey.currentState!.validate()) {
@@ -247,7 +305,9 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                               'bio': _bioCtrl.text.trim(),
                               'logo_text': _logoCtrl.text.trim(),
                               'profile_image_url': _finalProfileUrl,
-                              'header_image_url': _finalHeaderUrl
+                              'header_image_url': _finalHeaderUrl,
+                              'bg_image_url':
+                                  _finalBgUrl, // --- NEW: Push to Firestore ---
                             });
                             if (!context.mounted) return;
                             Navigator.pop(context);

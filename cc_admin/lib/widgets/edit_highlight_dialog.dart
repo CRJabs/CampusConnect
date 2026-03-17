@@ -60,16 +60,18 @@ class _EditHighlightDialogState extends State<EditHighlightDialog> {
 
     if (uploadedUrl != null && mounted) {
       setState(() {
-        if (isCarousel)
+        if (isCarousel) {
           _finalCarouselImageUrl = uploadedUrl;
-        else
+        } else {
           _finalPostImageUrl = uploadedUrl;
+        }
       });
     }
 
-    if (mounted)
+    if (mounted) {
       setState(() =>
           isCarousel ? _isUploadingCarousel = false : _isUploadingPost = false);
+    }
   }
 
   @override
@@ -225,22 +227,24 @@ class _EditHighlightDialogState extends State<EditHighlightDialog> {
                             'timestamp': FieldValue.serverTimestamp(),
                           };
 
-                          if (widget.docId == null)
+                          if (widget.docId == null) {
                             await FirebaseFirestore.instance
                                 .collection('highlights')
                                 .add(payload);
-                          else
+                          } else {
                             await FirebaseFirestore.instance
                                 .collection('highlights')
                                 .doc(widget.docId)
                                 .update(payload);
+                          }
 
                           if (!context.mounted) return;
                           Navigator.pop(context);
                         } catch (e) {
-                          if (context.mounted)
+                          if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(content: Text('Save Error: $e')));
+                          }
                           setState(() => _isSaving = false);
                         }
                       },

@@ -141,11 +141,13 @@ class _DirectoryTabState extends State<DirectoryTab>
             child: StreamBuilder<QuerySnapshot>(
                 stream: _directoryStream,
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting)
+                  if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
-                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
+                  }
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                     return Center(
                         child: Text('No $_activeDirectoryTab found.'));
+                  }
 
                   var docs = snapshot.data!.docs;
                   if (_searchCtrl.text.isNotEmpty) {
@@ -158,10 +160,11 @@ class _DirectoryTabState extends State<DirectoryTab>
                     }).toList();
                   }
 
-                  if (docs.isEmpty)
+                  if (docs.isEmpty) {
                     return const Center(
                         child: Text('No entries match your search.',
                             style: TextStyle(color: Colors.grey)));
+                  }
 
                   return ListView.builder(
                     itemCount: docs.length,

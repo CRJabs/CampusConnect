@@ -160,7 +160,7 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 // --- OPTIMIZATION: Switched to Image.asset for local files ---
                 Image.asset(
-                  '../assets/loginLogo.png',
+                  'assets/loginLogo.png',
                   height: 280,
                   errorBuilder: (context, error, stackTrace) => const Column(
                     children: [

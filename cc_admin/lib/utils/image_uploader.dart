@@ -4,22 +4,21 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 class ImageUploader {
-  // 1. Single Image Upload (Used for Avatars, Headers, and Carousel Banners)
   static Future<String?> pickAndUploadSingle(
       BuildContext context, String storagePath) async {
     final ImagePicker picker = ImagePicker();
 
-    // Pick & Compress
+    // --- 100% QUALITY RESTORED ---
     final XFile? image = await picker.pickImage(
       source: ImageSource.gallery,
-      imageQuality: 75,
-      maxWidth: 1920,
+      imageQuality: 100, // Maximum visual quality
+      maxWidth:
+          1920, // Full HD constraint drops raw 12MB camera files down to ~1.5MB
       maxHeight: 1920,
     );
 
     if (image == null) return null;
 
-    // Strict 50MB Limit Check
     int fileBytes = await image.length();
     if (fileBytes > 50 * 1024 * 1024) {
       if (context.mounted) {
@@ -29,7 +28,6 @@ class ImageUploader {
       return null;
     }
 
-    // Upload to Firebase
     try {
       final storageRef = FirebaseStorage.instance.ref().child(storagePath);
       if (kIsWeb) {
@@ -47,12 +45,13 @@ class ImageUploader {
     }
   }
 
-  // 2. Multi-Image Picker (Used for Posts) - Returns valid, compressed files under 50MB
   static Future<List<XFile>> pickMultipleValidImages(
       BuildContext context) async {
     final ImagePicker picker = ImagePicker();
+
+    // --- 100% QUALITY RESTORED ---
     final List<XFile> selectedImages = await picker.pickMultiImage(
-      imageQuality: 70, // Slightly higher compression for multi-uploads
+      imageQuality: 100, // Maximum visual quality
       maxWidth: 1920,
       maxHeight: 1920,
     );
@@ -62,7 +61,6 @@ class ImageUploader {
     List<XFile> validImages = [];
     bool oversizedSkipped = false;
 
-    // Filter out massive files
     for (var img in selectedImages) {
       int bytes = await img.length();
       if (bytes <= 50 * 1024 * 1024) {

@@ -64,13 +64,15 @@ class _HighlightsTabState extends State<HighlightsTab>
           StreamBuilder<QuerySnapshot>(
             stream: _highlightsStream,
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting)
+              if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
+              }
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                 return const Padding(
                     padding: EdgeInsets.all(20),
                     child: Text(
                         'No highlights found. They will fallback to default if empty.'));
+              }
 
               return ListView.builder(
                 shrinkWrap: true,
@@ -152,10 +154,11 @@ class _HighlightsTabState extends State<HighlightsTab>
           StreamBuilder<QuerySnapshot>(
               stream: _slotsStream,
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting)
+                if (snapshot.connectionState == ConnectionState.waiting) {
                   return const SizedBox(
                       height: 70,
                       child: Center(child: LinearProgressIndicator()));
+                }
 
                 Map<String, Map<String, dynamic>> slotsData = {};
                 if (snapshot.hasData) {

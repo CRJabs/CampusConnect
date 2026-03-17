@@ -114,8 +114,9 @@ class AdminDialogs {
                               .orderBy('name')
                               .snapshots(),
                           builder: (context, snapshot) {
-                            if (!snapshot.hasData)
+                            if (!snapshot.hasData) {
                               return const LinearProgressIndicator();
+                            }
                             return DropdownButtonFormField<String>(
                               value: selectedTargetId,
                               decoration: InputDecoration(
@@ -143,8 +144,9 @@ class AdminDialogs {
                   onPressed: isSaving
                       ? null
                       : () async {
-                          if (emailCtrl.text.isEmpty || passCtrl.text.isEmpty)
+                          if (emailCtrl.text.isEmpty || passCtrl.text.isEmpty) {
                             return;
+                          }
                           if (selectedRole != 'admin' &&
                               selectedTargetId == null) {
                             ScaffoldMessenger.of(dialogContext).showSnackBar(
@@ -318,14 +320,16 @@ class AdminDialogs {
                               .snapshots(),
                           builder: (context, snapshot) {
                             if (snapshot.connectionState ==
-                                ConnectionState.waiting)
+                                ConnectionState.waiting) {
                               return const Center(
                                   child: CircularProgressIndicator());
+                            }
                             if (!snapshot.hasData ||
-                                snapshot.data!.docs.isEmpty)
+                                snapshot.data!.docs.isEmpty) {
                               return const Center(
                                   child: Text('No login history found.',
                                       style: TextStyle(color: Colors.grey)));
+                            }
                             return ListView.builder(
                                 itemCount: snapshot.data!.docs.length,
                                 itemBuilder: (context, index) {
@@ -547,8 +551,9 @@ class AdminDialogs {
                           .orderBy('name')
                           .snapshots(),
                       builder: (context, snapshot) {
-                        if (!snapshot.hasData)
+                        if (!snapshot.hasData) {
                           return const LinearProgressIndicator();
+                        }
                         bool idExists = snapshot.data!.docs
                             .any((doc) => doc.id == selectedOrgId);
                         if (!idExists) {
@@ -610,8 +615,10 @@ class AdminDialogs {
                   onPressed: isSaving
                       ? null
                       : () async {
-                          if (selectedOrgId == null || selectedOrgName == null)
+                          if (selectedOrgId == null ||
+                              selectedOrgName == null) {
                             return;
+                          }
                           setDialogState(() => isSaving = true);
                           await FirebaseFirestore.instance
                               .collection('featured_sources')
@@ -704,22 +711,24 @@ class AdminDialogs {
                               'is_answered': true,
                               'timestamp': FieldValue.serverTimestamp()
                             };
-                            if (docId == null)
+                            if (docId == null) {
                               await FirebaseFirestore.instance
                                   .collection('faqs')
                                   .add(payload);
-                            else
+                            } else {
                               await FirebaseFirestore.instance
                                   .collection('faqs')
                                   .doc(docId)
                                   .update(payload);
+                            }
 
                             if (!dialogContext.mounted) return;
                             Navigator.pop(dialogContext);
                           } catch (e) {
-                            if (dialogContext.mounted)
+                            if (dialogContext.mounted) {
                               ScaffoldMessenger.of(dialogContext).showSnackBar(
                                   SnackBar(content: Text('Error: $e')));
+                            }
                             setDialogState(() => isSaving = false);
                           }
                         },

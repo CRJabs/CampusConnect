@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-// import 'package:image_picker/image_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import '../utils/image_uploader.dart'; // Import our new utility
 
 class CreatePostDialog extends StatefulWidget {
   final String targetId;
@@ -30,10 +29,40 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
   List<String> _uploadedImageUrls = [];
 
   Future<void> _handleMultiImageUpload() async {
-    final validImages = await ImageUploader.pickMultipleValidImages(context);
+    final ImagePicker picker = ImagePicker();
+
+    // --- 100% QUALITY RESTORED ---
+    final List<XFile> selectedImages = await picker.pickMultiImage(
+      imageQuality: 100,
+      maxWidth: 1920,
+      maxHeight: 1920,
+    );
+
+    if (selectedImages.isEmpty) return;
+
+    List<XFile> validImages = [];
+    bool oversizedSkipped = false;
+
+    for (var img in selectedImages) {
+      int bytes = await img.length();
+      if (bytes <= 50 * 1024 * 1024) {
+        validImages.add(img);
+      } else {
+        oversizedSkipped = true;
+      }
+    }
+
+    if (oversizedSkipped && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content:
+              Text('Some images were skipped for exceeding the 50MB limit.')));
+    }
+
     if (validImages.isEmpty) return;
 
-    int remainingSlots = 100 - _uploadedImageUrls.length;
+    int currentCount = _uploadedImageUrls.length;
+    int remainingSlots = 100 - currentCount;
+
     if (remainingSlots <= 0) {
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -47,7 +76,8 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
     List<Future<void>> uploadFutures = imagesToUpload.map((imageFile) async {
       try {
         String storagePath =
-            'organization_notices/${widget.targetId}/post_${DateTime.now().millisecondsSinceEpoch}_${imageFile.name}.jpg';
+            '${widget.targetCollection}/${widget.targetId}/post_images/post_${DateTime.now().millisecondsSinceEpoch}_${imageFile.name}.jpg';
+
         final storageRef = FirebaseStorage.instance.ref().child(storagePath);
 
         if (kIsWeb) {
@@ -110,7 +140,7 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       backgroundColor: Colors.white,
-      title: const Text('Publish Post',
+      title: const Text('Publish Announcement',
           style: TextStyle(fontWeight: FontWeight.bold)),
       content: SizedBox(
         width: 600,
