@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:carousel_slider/carousel_slider.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'department_feed_screen.dart';
 import 'post_detail_screen.dart';
+
+import '../utils/entity_cache.dart';
+import '../widgets/avatar_widget.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -16,59 +18,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _isHomeTabActive = true;
   String _activeExploreTab = 'administrations';
 
-  Future<Map<String, dynamic>> _fetchEntityData(String id) async {
-    try {
-      var doc = await FirebaseFirestore.instance
-          .collection('organizations')
-          .doc(id)
-          .get();
-      if (doc.exists && doc.data() != null) return doc.data()!;
-
-      doc = await FirebaseFirestore.instance
-          .collection('departments')
-          .doc(id)
-          .get();
-      if (doc.exists && doc.data() != null) return doc.data()!;
-
-      doc = await FirebaseFirestore.instance
-          .collection('administrations')
-          .doc(id)
-          .get();
-      if (doc.exists && doc.data() != null) return doc.data()!;
-    } catch (e) {
-      return {};
-    }
-    return {};
-  }
+  int _postLimit = 10;
 
   @override
   Widget build(BuildContext context) {
+    bool isDesktop = MediaQuery.of(context).size.width > 600;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(40),
+      // Fluid padding for mobile
+      padding: EdgeInsets.all(isDesktop ? 40 : 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildMainTabToggle(),
           const SizedBox(height: 20),
           if (_isHomeTabActive) ...[
-            _buildHeroCarousel(),
+            _buildHeroCarousel(isDesktop),
+            SizedBox(height: isDesktop ? 40 : 20),
+            const Text('Featured Announcements',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
-            const Text('Latest Announcements',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            _buildLatestAnnouncementsSection(isDesktop),
+            SizedBox(height: isDesktop ? 40 : 20),
+            const Text('Live Global Feed',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
-            _buildLatestAnnouncementsSection(),
-            const SizedBox(height: 20),
-            const Divider(),
-            const SizedBox(height: 20),
-            // const Text(
-            //     '___________________________________________________________________________________________',
-            //     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            // const SizedBox(height: 20),
             _buildGlobalLiveFeed(),
           ] else ...[
-            // const Text('Explore Directory',
-            //     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            // const SizedBox(height: 20),
             _buildDynamicListSection(context),
           ]
         ],
@@ -101,7 +77,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(25),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 8),
         decoration: BoxDecoration(
             color: isActive ? const Color(0xFF002147) : Colors.transparent,
             borderRadius: BorderRadius.circular(25)),
@@ -114,7 +90,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildHeroCarousel() {
+  Widget _buildHeroCarousel(bool isDesktop) {
     return StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('highlights')
@@ -122,9 +98,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const SizedBox(
-                height: 500,
-                child: Center(
+            return SizedBox(
+                height: isDesktop ? 400 : 250,
+                child: const Center(
                     child:
                         CircularProgressIndicator(color: Color(0xFF002147))));
           }
@@ -152,7 +128,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
           return CarouselSlider(
             options: CarouselOptions(
-                height: 500.0,
+                height: isDesktop ? 400.0 : 250.0,
                 autoPlay: true,
                 autoPlayInterval: const Duration(seconds: 6),
                 enlargeCenterPage: true,
@@ -180,37 +156,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       colorFilter: ColorFilter.mode(
                           Colors.black.withOpacity(0.5), BlendMode.darken)),
                 ),
-                padding: const EdgeInsets.all(40),
+                padding: EdgeInsets.all(isDesktop ? 40 : 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Text(cTitle,
-                        style: const TextStyle(
+                        style: TextStyle(
                             color: Colors.white,
-                            fontSize: 36,
+                            fontSize: isDesktop ? 36 : 24,
                             fontWeight: FontWeight.bold)),
-                    // const SizedBox(height: 5),
-                    Text(cDesc,
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 18)),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
+                    if (isDesktop)
+                      Text(cDesc,
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 18)),
+                    if (isDesktop) const SizedBox(height: 20),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFFFC107),
                           foregroundColor: Colors.black,
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 16)),
+                              horizontal: 24, vertical: 12)),
                       onPressed: () {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => PostDetailScreen(
-                                    title: pTitle,
-                                    desc: pDesc,
-                                    imageUrls: passImages,
-                                    orgName: 'Featured Highlight',
-                                    timeText: 'Pinned')));
+                        showDialog(
+                            context: context,
+                            builder: (context) => PostDetailScreen(
+                                title: pTitle,
+                                desc: pDesc,
+                                imageUrls: passImages,
+                                orgName: 'Featured Highlight',
+                                timeText: 'Pinned',
+                                logoText: 'UB'));
                       },
                       child: const Text('View Details →',
                           style: TextStyle(fontWeight: FontWeight.bold)),
@@ -223,21 +200,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
         });
   }
 
-  Widget _buildLatestAnnouncementsSection() {
+  Widget _buildLatestAnnouncementsSection(bool isDesktop) {
     return StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('featured_sources')
             .snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (snapshot.connectionState == ConnectionState.waiting)
             return const Center(
                 child: CircularProgressIndicator(color: Color(0xFF002147)));
-          }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
             return const Center(
                 child: Text('Admin has not configured featured accounts yet.',
                     style: TextStyle(color: Colors.grey)));
-          }
 
           var allDocs = snapshot.data!.docs.toList();
           allDocs.removeWhere((doc) {
@@ -246,13 +221,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           });
 
           allDocs.shuffle();
-          var displayDocs = allDocs.take(4).toList();
+          var displayDocs = allDocs.take(3).toList();
 
-          if (displayDocs.isEmpty) {
+          if (displayDocs.isEmpty)
             return const Center(
                 child: Text('No valid featured accounts configured.',
                     style: TextStyle(color: Colors.grey)));
-          }
 
           List<Widget> rowChildren = [];
 
@@ -269,9 +243,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     .limit(1)
                     .snapshots(),
                 builder: (context, postSnapshot) {
-                  // --- UPGRADED: Add FutureBuilder to fetch specific organization's profile picture ---
                   return FutureBuilder<Map<String, dynamic>>(
-                      future: _fetchEntityData(orgId),
+                      future: EntityCache.getEntityData(orgId),
                       builder: (context, entitySnapshot) {
                         String? profileUrl;
                         String logoText = "UB";
@@ -291,7 +264,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               'This organization has not published any recent updates.',
                               null,
                               profileUrl,
-                              logoText);
+                              logoText,
+                              orgId,
+                              isDesktop);
                         }
 
                         var postData = postSnapshot.data!.docs.first.data()
@@ -302,26 +277,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             postData['description'] ?? '',
                             postData,
                             profileUrl,
-                            logoText);
+                            logoText,
+                            orgId,
+                            isDesktop);
                       });
                 });
 
-            rowChildren.add(Expanded(child: cardWidget));
-
-            if (i < displayDocs.length - 1) {
-              rowChildren.add(const SizedBox(width: 15));
+            // Prevent flex wrap crash on mobile
+            if (isDesktop) {
+              rowChildren.add(Expanded(child: cardWidget));
+            } else {
+              rowChildren.add(Container(
+                  width: 280,
+                  margin: const EdgeInsets.only(right: 15),
+                  child: cardWidget));
             }
+
+            if (isDesktop && i < displayDocs.length - 1)
+              rowChildren.add(const SizedBox(width: 15));
           }
 
-          return Row(
-            children: rowChildren,
-          );
+          if (isDesktop) {
+            return Row(children: rowChildren);
+          } else {
+            // Allows horizontal scrolling on phones instead of crushing the layout
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: rowChildren),
+            );
+          }
         });
   }
 
-  // --- UPGRADED: Removed badgeColor, added profileUrl and logoText parameters ---
-  Widget _buildInfoCard(String source, String title, String desc,
-      Map<String, dynamic>? postData, String? profileUrl, String logoText) {
+  Widget _buildInfoCard(
+      String source,
+      String title,
+      String desc,
+      Map<String, dynamic>? postData,
+      String? profileUrl,
+      String logoText,
+      String orgId,
+      bool isDesktop) {
     return Container(
       height: 230,
       padding: const EdgeInsets.all(20),
@@ -332,47 +328,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --- UPGRADED: Replaced colored pill with Avatar profile block ---
           Row(
             children: [
-              Container(
-                width: 35,
-                height: 35,
-                decoration: const BoxDecoration(
-                    color: Colors.white, shape: BoxShape.circle),
-                clipBehavior: Clip.antiAlias,
-                child: (profileUrl != null && profileUrl.trim().isNotEmpty)
-                    ? Image.network(profileUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (c, e, s) => Center(
-                            child: Text(
-                                logoText.isNotEmpty
-                                    ? logoText.substring(0, 1)
-                                    : 'U',
-                                style: const TextStyle(
-                                    color: Color(0xFF002147),
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold))))
-                    : Center(
-                        child: Text(
-                            logoText.isNotEmpty
-                                ? logoText.substring(0, 1)
-                                : 'U',
-                            style: const TextStyle(
-                                color: Color(0xFF002147),
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold))),
-              ),
+              AvatarWidget(
+                  imageUrl: profileUrl,
+                  logoText: logoText,
+                  size: 35,
+                  fontSize: 14),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(source,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                        fontSize: 13),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis),
-              ),
+                  child: Text(source,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                          fontSize: 13),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis)),
             ],
           ),
           const SizedBox(height: 15),
@@ -386,19 +357,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
               maxLines: 2,
               overflow: TextOverflow.ellipsis),
           const Spacer(),
-
           if (postData != null)
             InkWell(
               onTap: () {
                 List<String> imageUrls = [];
                 if (postData.containsKey('image_urls') &&
-                    postData['image_urls'] is List) {
+                    postData['image_urls'] is List)
                   imageUrls = List<String>.from(postData['image_urls']);
-                } else if (postData.containsKey('image_url') &&
+                else if (postData.containsKey('image_url') &&
                     postData['image_url'] != null &&
-                    postData['image_url'].isNotEmpty) {
+                    postData['image_url'].isNotEmpty)
                   imageUrls = [postData['image_url']];
-                }
 
                 String timeText = 'Recently';
                 if (postData['timestamp'] != null) {
@@ -406,15 +375,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   timeText = "${date.month}/${date.day}/${date.year}";
                 }
 
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => PostDetailScreen(
-                            title: title,
-                            desc: desc,
-                            imageUrls: imageUrls,
-                            orgName: source,
-                            timeText: timeText)));
+                showDialog(
+                    context: context,
+                    builder: (context) => PostDetailScreen(
+                        title: title,
+                        desc: desc,
+                        imageUrls: imageUrls,
+                        orgName: source,
+                        timeText: timeText,
+                        profileUrl: profileUrl,
+                        logoText: logoText));
               },
               child: const Text('Read More →',
                   style: TextStyle(
@@ -432,267 +402,296 @@ class _DashboardScreenState extends State<DashboardScreen> {
       stream: FirebaseFirestore.instance
           .collection('organization_notices')
           .orderBy('timestamp', descending: true)
+          .limit(_postLimit)
           .snapshots(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            _postLimit == 10)
           return const Center(
               child: Padding(
                   padding: EdgeInsets.all(20),
                   child: CircularProgressIndicator()));
-        }
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
           return const Center(
               child: Text("No posts at this time.",
                   style: TextStyle(color: Colors.grey)));
-        }
 
         final posts = snapshot.data!.docs;
 
-        return ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: posts.length,
-          itemBuilder: (context, index) {
-            var postData = posts[index].data() as Map<String, dynamic>;
-            String orgId = postData['org_id'] ?? '';
-            String title = postData['title'] ?? 'No Title';
-            String desc = postData['description'] ?? '';
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: posts.length,
+              itemBuilder: (context, index) {
+                var postData = posts[index].data() as Map<String, dynamic>;
+                String orgId = postData['org_id'] ?? '';
+                String title = postData['title'] ?? 'No Title';
+                String desc = postData['description'] ?? '';
 
-            List<String> imageUrls = [];
-            if (postData.containsKey('image_urls') &&
-                postData['image_urls'] is List) {
-              imageUrls = List<String>.from(postData['image_urls']);
-            } else if (postData.containsKey('image_url') &&
-                postData['image_url'] != null &&
-                postData['image_url'].isNotEmpty) {
-              imageUrls = [postData['image_url']];
-            }
+                List<String> imageUrls = [];
+                if (postData.containsKey('image_urls') &&
+                    postData['image_urls'] is List)
+                  imageUrls = List<String>.from(postData['image_urls']);
+                else if (postData.containsKey('image_url') &&
+                    postData['image_url'] != null &&
+                    postData['image_url'].isNotEmpty)
+                  imageUrls = [postData['image_url']];
 
-            String timeText = 'Recently';
-            if (postData['timestamp'] != null) {
-              DateTime date = (postData['timestamp'] as Timestamp).toDate();
-              timeText = "${date.month}/${date.day}/${date.year}";
-            }
+                String timeText = 'Recently';
+                if (postData['timestamp'] != null) {
+                  DateTime date = (postData['timestamp'] as Timestamp).toDate();
+                  timeText = "${date.month}/${date.day}/${date.year}";
+                }
 
-            return FutureBuilder<Map<String, dynamic>>(
-                future: _fetchEntityData(orgId),
-                builder: (context, entitySnapshot) {
-                  String orgName = "Campus Organization";
-                  String? profileUrl;
-                  String logoText = "UB";
+                return FutureBuilder<Map<String, dynamic>>(
+                    future: EntityCache.getEntityData(orgId),
+                    builder: (context, entitySnapshot) {
+                      String orgName = "Campus Organization";
+                      String? profileUrl;
+                      String logoText = "UB";
 
-                  if (entitySnapshot.hasData &&
-                      entitySnapshot.data!.isNotEmpty) {
-                    var orgData = entitySnapshot.data!;
-                    orgName = orgData['name'] ?? orgName;
-                    profileUrl = orgData['profile_image_url'];
-                    logoText = orgData['logo_text'] ?? 'UB';
-                  }
+                      if (entitySnapshot.hasData &&
+                          entitySnapshot.data!.isNotEmpty) {
+                        var orgData = entitySnapshot.data!;
+                        orgName = orgData['name'] ?? orgName;
+                        profileUrl = orgData['profile_image_url'];
+                        logoText = orgData['logo_text'] ?? 'UB';
+                      }
 
-                  return Card(
-                    color: Colors.white,
-                    surfaceTintColor: Colors.transparent,
-                    elevation: 0,
-                    margin: const EdgeInsets.only(bottom: 20),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: Colors.grey.shade200)),
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => PostDetailScreen(
-                                  title: title,
-                                  desc: desc,
-                                  imageUrls: imageUrls,
-                                  orgName: orgName,
-                                  timeText: timeText))),
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+                      return Card(
+                        color: Colors.white,
+                        surfaceTintColor: Colors.transparent,
+                        elevation: 0,
+                        margin: const EdgeInsets.only(bottom: 20),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(color: Colors.grey.shade200)),
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          onTap: () {
+                            showDialog(
+                                context: context,
+                                builder: (context) => PostDetailScreen(
+                                    title: title,
+                                    desc: desc,
+                                    imageUrls: imageUrls,
+                                    orgName: orgName,
+                                    timeText: timeText,
+                                    profileUrl: profileUrl,
+                                    logoText: logoText));
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: const BoxDecoration(
-                                      color: Colors.white,
-                                      shape: BoxShape.circle),
-                                  clipBehavior: Clip.antiAlias,
-                                  child: (profileUrl != null &&
-                                          profileUrl.trim().isNotEmpty)
-                                      ? Image.network(profileUrl,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (c, e, s) => Center(
-                                              child: Text(logoText.isNotEmpty ? logoText.substring(0, 1) : 'U',
-                                                  style: const TextStyle(
-                                                      color: Color(0xFF002147),
-                                                      fontSize: 14,
-                                                      fontWeight:
-                                                          FontWeight.bold))))
-                                      : Center(
-                                          child: Text(logoText.isNotEmpty ? logoText.substring(0, 1) : 'U',
-                                              style: const TextStyle(
-                                                  color: Color(0xFF002147),
-                                                  fontSize: 15,
-                                                  fontWeight:
-                                                      FontWeight.bold))),
-                                ),
-                                const SizedBox(width: 10),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                Row(
                                   children: [
-                                    Text(orgName,
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                    Text(timeText,
-                                        style: const TextStyle(
-                                            color: Colors.grey, fontSize: 12)),
+                                    AvatarWidget(
+                                        imageUrl: profileUrl,
+                                        logoText: logoText,
+                                        size: 40,
+                                        fontSize: 14),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(orgName,
+                                                style: const TextStyle(
+                                                    fontWeight:
+                                                        FontWeight.bold),
+                                                maxLines: 1,
+                                                overflow:
+                                                    TextOverflow.ellipsis),
+                                            Text(timeText,
+                                                style: const TextStyle(
+                                                    color: Colors.grey,
+                                                    fontSize: 12))
+                                          ]),
+                                    ),
                                   ],
                                 ),
+                                const SizedBox(height: 15),
+                                Text(title,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 20)),
+                                const SizedBox(height: 5),
+                                Text(desc,
+                                    style: const TextStyle(
+                                        fontSize: 16, height: 1.5),
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis),
+                                if (imageUrls.isNotEmpty) ...[
+                                  const SizedBox(height: 15),
+                                  _buildPostImageFeedGrid(imageUrls),
+                                ]
                               ],
                             ),
-                            const SizedBox(height: 15),
-                            Text(title,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 20)),
-                            const SizedBox(height: 5),
-                            Text(desc,
-                                style:
-                                    const TextStyle(fontSize: 16, height: 1.5),
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis),
-                            if (imageUrls.isNotEmpty) ...[
-                              const SizedBox(height: 15),
-                              _buildPostImageFeedGrid(imageUrls),
-                            ]
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
-                  );
-                });
-          },
+                      );
+                    });
+              },
+            ),
+            if (posts.length >= _postLimit)
+              Padding(
+                padding: const EdgeInsets.only(top: 10, bottom: 20),
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF002147),
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    side: BorderSide(color: Colors.grey.shade300),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _postLimit += 10;
+                    });
+                  },
+                  icon: const Icon(Icons.expand_more),
+                  label: const Text('Load More Posts',
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                ),
+              )
+          ],
         );
       },
     );
   }
 
   Widget _buildPostImageFeedGrid(List<String> imageUrls) {
-    int imageCount = imageUrls.length;
+    int count = imageUrls.length;
 
-    ClipRRect gridImage(String url) => ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Image.network(url,
-            height: double.infinity,
-            width: double.infinity,
-            fit: BoxFit.cover,
-            cacheWidth: 500,
-            errorBuilder: (c, e, s) =>
-                const Center(child: Icon(Icons.broken_image))));
+    Widget buildNetworkImage(String url, BoxFit fit) {
+      return Image.network(
+        url,
+        fit: fit,
+        width: double.infinity,
+        height: double.infinity,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
+            color: Colors.grey.shade100,
+            child: Center(
+              child: CircularProgressIndicator(
+                color: const Color(0xFF002147),
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded /
+                        (loadingProgress.expectedTotalBytes ?? 1)
+                    : null,
+              ),
+            ),
+          );
+        },
+        errorBuilder: (c, e, s) =>
+            const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
+      );
+    }
 
-    if (imageCount == 1) {
-      return AspectRatio(aspectRatio: 16 / 9, child: gridImage(imageUrls[0]));
-    } else if (imageCount == 2) {
-      return AspectRatio(
-          aspectRatio: 16 / 9,
-          child: StaggeredGrid.count(
-              crossAxisCount: 2,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              children: [
-                StaggeredGridTile.count(
-                    crossAxisCellCount: 1,
-                    mainAxisCellCount: 1,
-                    child: gridImage(imageUrls[0])),
-                StaggeredGridTile.count(
-                    crossAxisCellCount: 1,
-                    mainAxisCellCount: 1,
-                    child: gridImage(imageUrls[1]))
-              ]));
-    } else if (imageCount == 3) {
-      return AspectRatio(
-          aspectRatio: 16 / 9,
-          child: StaggeredGrid.count(
-              crossAxisCount: 3,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              children: [
-                StaggeredGridTile.count(
-                    crossAxisCellCount: 1,
-                    mainAxisCellCount: 1,
-                    child: gridImage(imageUrls[0])),
-                StaggeredGridTile.count(
-                    crossAxisCellCount: 1,
-                    mainAxisCellCount: 1,
-                    child: gridImage(imageUrls[1])),
-                StaggeredGridTile.count(
-                    crossAxisCellCount: 1,
-                    mainAxisCellCount: 1,
-                    child: gridImage(imageUrls[2]))
-              ]));
-    } else {
+    if (count == 1) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          double maxWidth = constraints.maxWidth;
+          return ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: maxWidth / 1.54,
+              maxHeight: maxWidth / 1.0,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                color: Colors.grey.shade900,
+                width: double.infinity,
+                child: buildNetworkImage(imageUrls[0], BoxFit.contain),
+              ),
+            ),
+          );
+        },
+      );
+    }
+
+    if (count == 2) {
       return AspectRatio(
         aspectRatio: 16 / 9,
-        child: StaggeredGrid.count(
-          crossAxisCount: 4,
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
+        child: Row(
           children: [
-            StaggeredGridTile.count(
-                crossAxisCellCount: 2,
-                mainAxisCellCount: 2,
-                child: gridImage(imageUrls[0])),
-            StaggeredGridTile.count(
-                crossAxisCellCount: 2,
-                mainAxisCellCount: 1,
-                child: StaggeredGrid.count(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 8,
-                    crossAxisSpacing: 8,
-                    children: [
-                      StaggeredGridTile.count(
-                          crossAxisCellCount: 1,
-                          mainAxisCellCount: 1,
-                          child: gridImage(imageUrls[1])),
-                      StaggeredGridTile.count(
-                          crossAxisCellCount: 1,
-                          mainAxisCellCount: 1,
-                          child: gridImage(imageUrls[2]))
-                    ])),
-            StaggeredGridTile.count(
-                crossAxisCellCount: 2,
-                mainAxisCellCount: 1,
-                child: Stack(
-                  children: [
-                    gridImage(imageUrls[3]),
-                    if (imageCount > 4) ...[
-                      Positioned.fill(
-                          child: Container(
-                              decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.5),
-                                  borderRadius: BorderRadius.circular(8)),
-                              child: Center(
-                                  child: Text('+${imageCount - 3}',
-                                      style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 32,
-                                          fontWeight: FontWeight.bold))))),
-                    ]
-                  ],
-                )),
+            Expanded(
+                child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: buildNetworkImage(imageUrls[0], BoxFit.cover))),
+            const SizedBox(width: 8),
+            Expanded(
+                child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: buildNetworkImage(imageUrls[1], BoxFit.cover))),
           ],
         ),
       );
     }
+
+    return AspectRatio(
+      aspectRatio: 16 / 9,
+      child: Row(
+        children: [
+          Expanded(
+            flex: 1,
+            child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: buildNetworkImage(imageUrls[0], BoxFit.cover)),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 1,
+            child: Column(
+              children: [
+                Expanded(
+                    child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: buildNetworkImage(imageUrls[1], BoxFit.cover))),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        buildNetworkImage(imageUrls[2], BoxFit.cover),
+                        if (count > 3)
+                          Container(
+                            color: Colors.black.withOpacity(0.6),
+                            alignment: Alignment.center,
+                            child: Text(
+                              '+${count - 3}',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          )
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildDynamicListSection(BuildContext context) {
     String currentCollection = _activeExploreTab;
-
     return Container(
       decoration: BoxDecoration(
           color: Colors.white,
@@ -718,25 +717,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 .orderBy('name')
                 .snapshots(),
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
+              if (snapshot.connectionState == ConnectionState.waiting)
                 return const Padding(
                     padding: EdgeInsets.all(40.0),
                     child: Center(
                         child: CircularProgressIndicator(
                             color: Color(0xFF002147))));
-              }
-              if (snapshot.hasError) {
+              if (snapshot.hasError)
                 return Padding(
                     padding: const EdgeInsets.all(40.0),
                     child: Center(child: Text('Error: ${snapshot.error}')));
-              }
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
                 return Padding(
                     padding: const EdgeInsets.all(40.0),
                     child: Center(
                         child: Text('No data found in "$currentCollection".',
                             style: const TextStyle(color: Colors.grey))));
-              }
+
               final docs = snapshot.data!.docs;
 
               return ListView.separated(
@@ -757,34 +754,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   return ListTile(
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 20, vertical: 10),
-                    leading: Container(
-                      width: 45,
-                      height: 45,
-                      decoration: const BoxDecoration(
-                          color: Colors.white, shape: BoxShape.circle),
-                      clipBehavior: Clip.antiAlias,
-                      child: (profileUrl != null && profileUrl.trim().isNotEmpty)
-                          ? Image.network(profileUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (c, e, s) => Center(
-                                  child: Text(
-                                      logoText.length > 4
-                                          ? logoText.substring(0, 4)
-                                          : logoText,
-                                      style: const TextStyle(
-                                          color: Color(0xFF002147),
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold))))
-                          : Center(
-                              child: Text(
-                                  logoText.length > 4
-                                      ? logoText.substring(0, 4)
-                                      : logoText,
-                                  style: const TextStyle(
-                                      color: Color(0xFF002147),
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold))),
-                    ),
+                    leading: AvatarWidget(
+                        imageUrl: profileUrl,
+                        logoText: logoText,
+                        size: 45,
+                        fontSize: 12),
                     title: Text(name,
                         style: const TextStyle(fontWeight: FontWeight.w600)),
                     trailing: Row(
@@ -792,17 +766,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       children: [
                         if (newNotices > 0)
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                                color: Colors.green,
-                                borderRadius: BorderRadius.circular(12)),
-                            child: Text('$newNotices new',
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold)),
-                          ),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                  color: Colors.green,
+                                  borderRadius: BorderRadius.circular(12)),
+                              child: Text('$newNotices new',
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold))),
                         const SizedBox(width: 10),
                         const Icon(Icons.chevron_right, color: Colors.grey),
                       ],
@@ -816,7 +789,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 debugPrint(
                                     "Badge reset failed or blocked by rules."));
                       }
-
                       Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -853,8 +825,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   style: TextStyle(
                       fontWeight:
                           isActive ? FontWeight.bold : FontWeight.normal,
-                      color:
-                          isActive ? const Color(0xFF002147) : Colors.grey))),
+                      color: isActive ? const Color(0xFF002147) : Colors.grey),
+                  textAlign: TextAlign.center)),
         ),
       ),
     );

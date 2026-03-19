@@ -1,3 +1,4 @@
+import 'dart:async'; // --- NEW: Needed for Search Debouncer ---
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -12,6 +13,30 @@ class _FAQScreenState extends State<FAQScreen> {
   String _searchQuery = '';
   int _currentPage = 0;
   final int _itemsPerPage = 10;
+
+  // --- OPTIMIZATION 1: Search Debouncer ---
+  Timer? _debounce;
+
+  // --- OPTIMIZATION 2: Persistent Stream ---
+  late Stream<QuerySnapshot> _faqStream;
+
+  @override
+  void initState() {
+    super.initState();
+    // Start the stream ONCE.
+    // We added the 'where' clause here so Firebase ONLY sends answered questions!
+    _faqStream = FirebaseFirestore.instance
+        .collection('faqs')
+        .where('is_answered', isEqualTo: true)
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
 
   void _submitNewQuestionDialog() {
     final questionCtrl = TextEditingController();
@@ -62,7 +87,6 @@ class _FAQScreenState extends State<FAQScreen> {
                           setDialogState(() => isSubmitting = true);
 
                           try {
-                            // Send to database as an unanswered (blank) question
                             await FirebaseFirestore.instance
                                 .collection('faqs')
                                 .add({
@@ -92,7 +116,8 @@ class _FAQScreenState extends State<FAQScreen> {
                       ? const SizedBox(
                           width: 16,
                           height: 16,
-                          child: CircularProgressIndicator(color: Colors.white))
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
                       : const Text('Submit Question'),
                 )
               ],
@@ -107,7 +132,6 @@ class _FAQScreenState extends State<FAQScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 40),
       child: Column(
         children: [
-          // --- UPGRADED: Replaced Text with Image Placeholder ---
           Image.asset(
             'assets/faq.png',
             height: 100,
@@ -138,9 +162,13 @@ class _FAQScreenState extends State<FAQScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: TextField(
               onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                  _currentPage = 0; // Reset to page 1 on new search
+                // --- OPTIMIZATION 3: Search Debouncer applied ---
+                if (_debounce?.isActive ?? false) _debounce!.cancel();
+                _debounce = Timer(const Duration(milliseconds: 300), () {
+                  setState(() {
+                    _searchQuery = value;
+                    _currentPage = 0;
+                  });
                 });
               },
               decoration: const InputDecoration(
@@ -152,12 +180,8 @@ class _FAQScreenState extends State<FAQScreen> {
           ),
           const SizedBox(height: 40),
 
-          // --- LIVE FIREBASE FAQ FEED ---
           StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('faqs')
-                .orderBy('timestamp', descending: true)
-                .snapshots(),
+            stream: _faqStream, // Use the persistent stream initialized above
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(
@@ -166,18 +190,14 @@ class _FAQScreenState extends State<FAQScreen> {
 
               if (snapshot.hasError) return Text('Error: ${snapshot.error}');
 
-              // Filter out questions that haven't been answered by admin yet
-              var allDocs = snapshot.data?.docs ?? [];
-              var answeredDocs =
-                  allDocs.where((doc) => doc['is_answered'] == true).toList();
+              // Docs are ALREADY filtered to only answered ones by Firebase!
+              var answeredDocs = snapshot.data?.docs ?? [];
 
-              // Apply the live search filter
               var searchResults = answeredDocs.where((doc) {
                 String q = (doc['question'] ?? '').toString().toLowerCase();
                 return q.contains(_searchQuery.toLowerCase());
               }).toList();
 
-              // --- EMPTY SEARCH STATE UI ---
               if (searchResults.isEmpty) {
                 return Container(
                   padding: const EdgeInsets.all(50),
@@ -214,10 +234,10 @@ class _FAQScreenState extends State<FAQScreen> {
                 );
               }
 
-              // --- PAGINATION MATH ---
               int totalPages = (searchResults.length / _itemsPerPage).ceil();
-              if (_currentPage >= totalPages && totalPages > 0)
+              if (_currentPage >= totalPages && totalPages > 0) {
                 _currentPage = totalPages - 1;
+              }
 
               int startIndex = _currentPage * _itemsPerPage;
               int endIndex = startIndex + _itemsPerPage;
@@ -228,14 +248,11 @@ class _FAQScreenState extends State<FAQScreen> {
 
               return Column(
                 children: [
-                  // List of 10 FAQs
                   ...pagedResults.map((doc) {
                     var data = doc.data() as Map<String, dynamic>;
                     return _buildFaqTile(
                         data['question'] ?? '', data['answer'] ?? '');
                   }),
-
-                  // Next/Prev Arrows
                   if (totalPages > 1) ...[
                     const SizedBox(height: 30),
                     Row(
