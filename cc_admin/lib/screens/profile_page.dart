@@ -6,6 +6,7 @@ import 'login_screen.dart';
 
 import '../widgets/create_post_dialog.dart';
 import '../widgets/edit_profile_dialog.dart';
+import '../utils/activity_logger.dart';
 import '../utils/admin_dialogs.dart';
 import '../widgets/avatar_widget.dart';
 
@@ -56,6 +57,8 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _logout(BuildContext context) async {
+    await ActivityLogger.log('Organization editor logged out',
+        source: 'Authentication');
     await FirebaseAuth.instance.signOut();
     if (!context.mounted) return;
     Navigator.pushReplacement(
@@ -64,11 +67,12 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isInitializing)
+    if (_isInitializing) {
       return const Scaffold(
           body: Center(
               child: CircularProgressIndicator(color: Color(0xFF002147))));
-    if (_errorMessage.isNotEmpty)
+    }
+    if (_errorMessage.isNotEmpty) {
       return Scaffold(
           appBar: AppBar(
               title: const Text('Error'),
@@ -77,6 +81,7 @@ class _ProfilePageState extends State<ProfilePage> {
           body: Center(
               child: Text(_errorMessage,
                   style: const TextStyle(color: Colors.red))));
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F2F5),
@@ -103,8 +108,9 @@ class _ProfilePageState extends State<ProfilePage> {
             .doc(_targetId!)
             .snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData || !snapshot.data!.exists)
+          if (!snapshot.hasData || !snapshot.data!.exists) {
             return const Center(child: CircularProgressIndicator());
+          }
           var data = snapshot.data!.data() as Map<String, dynamic>;
           String orgName = data['name'] ?? 'Unnamed Organization';
           String logoText = data['logo_text'] ?? 'UB';
@@ -339,17 +345,19 @@ class _RecentPostsFeedState extends State<RecentPostsFeed> {
                 .snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting &&
-                  _postLimit == 10)
+                  _postLimit == 10) {
                 return const Center(
                     child: Padding(
                         padding: EdgeInsets.all(20),
                         child: CircularProgressIndicator()));
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
+              }
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                 return Container(
                     padding: const EdgeInsets.all(40),
                     alignment: Alignment.center,
                     child: const Text("No announcements published yet.",
                         style: TextStyle(color: Colors.grey)));
+              }
 
               final posts = snapshot.data!.docs;
 
@@ -368,9 +376,9 @@ class _RecentPostsFeedState extends State<RecentPostsFeed> {
 
                       List<String> imageUrls = [];
                       if (postData.containsKey('image_urls') &&
-                          postData['image_urls'] is List)
+                          postData['image_urls'] is List) {
                         imageUrls = List<String>.from(postData['image_urls']);
-                      else if (postData.containsKey('image_url') &&
+                      } else if (postData.containsKey('image_url') &&
                           postData['image_url'] != null &&
                           postData['image_url'].isNotEmpty)
                         imageUrls = [postData['image_url']];
@@ -430,12 +438,17 @@ class _RecentPostsFeedState extends State<RecentPostsFeed> {
                                           color: Colors.red),
                                       onPressed: () =>
                                           AdminDialogs.confirmDelete(
-                                              context, "Post: $title", () {
-                                            FirebaseFirestore.instance
+                                              context, "Post: $title", () async {
+                                            await FirebaseFirestore.instance
                                                 .collection(
                                                     'organization_notices')
                                                 .doc(post.id)
                                                 .delete();
+                                            await ActivityLogger.log(
+                                              'Deleted announcement: $title',
+                                              source: 'Posts',
+                                              targetId: post.id,
+                                            );
                                           }))
                                 ]),
                                 const SizedBox(height: 15),

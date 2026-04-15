@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'activity_logger.dart';
 
 class AdminDialogs {
   // --- NEW: Global Delete Confirmation Safety Net ---
@@ -181,6 +182,11 @@ class AdminDialogs {
                                             ? 'organizations'
                                             : 'administrations',
                             });
+                            await ActivityLogger.log(
+                              'Created account: ${emailCtrl.text.trim()} (${selectedRole.toUpperCase()})',
+                              source: 'Accounts',
+                              targetId: newCred.user!.uid,
+                            );
                             await tempApp.delete();
                             if (!dialogContext.mounted) return;
                             Navigator.pop(dialogContext);
@@ -262,6 +268,11 @@ class AdminDialogs {
                               .collection('users')
                               .doc(uid)
                               .update({'email': emailCtrl.text.trim()});
+                          await ActivityLogger.log(
+                            'Updated account email: ${emailCtrl.text.trim()}',
+                            source: 'Accounts',
+                            targetId: uid,
+                          );
                           if (!dialogContext.mounted) return;
                           Navigator.pop(dialogContext);
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -418,6 +429,10 @@ class AdminDialogs {
                             'logo_text': logoCtrl.text.trim().toUpperCase(),
                             'new_notices_count': 0
                           });
+                          await ActivityLogger.log(
+                            'Added ${collection.substring(0, collection.length - 1)}: ${nameCtrl.text.trim()}',
+                            source: 'Directory',
+                          );
                           if (!dialogContext.mounted) return;
                           Navigator.pop(dialogContext);
                         },
@@ -468,6 +483,11 @@ class AdminDialogs {
                               .collection(collection)
                               .doc(docId)
                               .update({'name': nameCtrl.text.trim()});
+                          await ActivityLogger.log(
+                            'Updated directory entry: ${nameCtrl.text.trim()}',
+                            source: 'Directory',
+                            targetId: docId,
+                          );
                           if (!dialogContext.mounted) return;
                           Navigator.pop(dialogContext);
                         },
@@ -629,6 +649,11 @@ class AdminDialogs {
                             'collection': selectedCollection,
                             'badge_color': selectedColor
                           });
+                          await ActivityLogger.log(
+                            'Configured $slotId to ${selectedOrgName!} (${selectedCollection})',
+                            source: 'Highlights',
+                            targetId: slotId,
+                          );
                           if (!dialogContext.mounted) return;
                           Navigator.pop(dialogContext);
                         },
@@ -715,11 +740,20 @@ class AdminDialogs {
                               await FirebaseFirestore.instance
                                   .collection('faqs')
                                   .add(payload);
+                              await ActivityLogger.log(
+                                'Added FAQ: ${questionCtrl.text.trim()}',
+                                source: 'FAQ',
+                              );
                             } else {
                               await FirebaseFirestore.instance
                                   .collection('faqs')
                                   .doc(docId)
                                   .update(payload);
+                              await ActivityLogger.log(
+                                'Answered/updated FAQ: ${questionCtrl.text.trim()}',
+                                source: 'FAQ',
+                                targetId: docId,
+                              );
                             }
 
                             if (!dialogContext.mounted) return;

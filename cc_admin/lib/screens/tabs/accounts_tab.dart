@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../utils/admin_dialogs.dart';
+import '../../utils/activity_logger.dart';
 
 class AccountsTab extends StatefulWidget {
   const AccountsTab({super.key});
@@ -166,11 +167,16 @@ class _AccountsTabState extends State<AccountsTab>
                                     foregroundColor: Colors.red),
                                 onPressed: () => AdminDialogs.confirmDelete(
                                         context, "Account: ${data['email']}",
-                                        () {
-                                      FirebaseFirestore.instance
+                                        () async {
+                                      await FirebaseFirestore.instance
                                           .collection('users')
                                           .doc(doc.id)
                                           .delete();
+                                      await ActivityLogger.log(
+                                        'Deleted account: ${data['email']}',
+                                        source: 'Accounts',
+                                        targetId: doc.id,
+                                      );
                                     }),
                                 icon: const Icon(Icons.delete, size: 18),
                                 label: const Text('Delete')),

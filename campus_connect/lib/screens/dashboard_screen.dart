@@ -20,32 +20,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   int _postLimit = 10;
 
+  // --- FLUID UI HELPER FUNCTION ---
+  // Smoothly scales values between minSize and maxSize based on the screen width
+  double getFluidSize(double currentWidth,
+      {required double minSize, required double maxSize}) {
+    const double minScreen = 400.0; // Mobile phone width
+    const double maxScreen = 1400.0; // Desktop/Kiosk width
+
+    double t = (currentWidth - minScreen) / (maxScreen - minScreen);
+    t = t.clamp(0.0, 1.0); // Ensures 't' stays strictly between 0 and 1
+
+    return minSize + (maxSize - minSize) * t;
+  }
+
   @override
   Widget build(BuildContext context) {
-    bool isDesktop = MediaQuery.of(context).size.width > 600;
+    double screenWidth = MediaQuery.of(context).size.width;
+    // bool isDesktop = screenWidth > 1400; // Kept for structural layout changes
 
     return SingleChildScrollView(
-      // Fluid padding for mobile
-      padding: EdgeInsets.all(isDesktop ? 40 : 16),
+      padding: EdgeInsets.symmetric(
+        // Smoothly scales top/bottom padding between 20 and 40
+        vertical: getFluidSize(screenWidth, minSize: 20, maxSize: 40),
+        // Smoothly scales left/right padding between 32 and 512
+        horizontal: getFluidSize(screenWidth, minSize: 32, maxSize: 128),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildMainTabToggle(),
           const SizedBox(height: 20),
           if (_isHomeTabActive) ...[
-            _buildHeroCarousel(isDesktop),
-            SizedBox(height: isDesktop ? 40 : 20),
-            const Text('Featured Announcements',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            _buildHeroCarousel(screenWidth),
+            SizedBox(
+                height: getFluidSize(screenWidth, minSize: 20, maxSize: 40)),
+            Text('Featured Posts',
+                style: TextStyle(
+                    fontSize:
+                        getFluidSize(screenWidth, minSize: 16, maxSize: 22),
+                    fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
-            _buildLatestAnnouncementsSection(isDesktop),
-            SizedBox(height: isDesktop ? 40 : 20),
-            const Text('Live Global Feed',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            _buildLatestAnnouncementsSection(screenWidth),
+            SizedBox(
+                height: getFluidSize(screenWidth, minSize: 20, maxSize: 40)),
             const SizedBox(height: 20),
-            _buildGlobalLiveFeed(),
+            _buildGlobalLiveFeed(screenWidth),
           ] else ...[
-            _buildDynamicListSection(context),
+            _buildDynamicListSection(context, screenWidth),
           ]
         ],
       ),
@@ -90,7 +111,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildHeroCarousel(bool isDesktop) {
+  Widget _buildHeroCarousel(double screenWidth) {
+    bool isDesktop = screenWidth > 1400;
+
     return StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('highlights')
@@ -99,7 +122,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return SizedBox(
-                height: isDesktop ? 400 : 250,
+                height: getFluidSize(screenWidth, minSize: 250, maxSize: 400),
                 child: const Center(
                     child:
                         CircularProgressIndicator(color: Color(0xFF002147))));
@@ -128,7 +151,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
           return CarouselSlider(
             options: CarouselOptions(
-                height: isDesktop ? 400.0 : 250.0,
+                height: getFluidSize(screenWidth, minSize: 250, maxSize: 500),
                 autoPlay: true,
                 autoPlayInterval: const Duration(seconds: 6),
                 enlargeCenterPage: true,
@@ -156,7 +179,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       colorFilter: ColorFilter.mode(
                           Colors.black.withOpacity(0.5), BlendMode.darken)),
                 ),
-                padding: EdgeInsets.all(isDesktop ? 40 : 20),
+                padding: EdgeInsets.all(
+                    getFluidSize(screenWidth, minSize: 20, maxSize: 40)),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.end,
@@ -164,8 +188,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Text(cTitle,
                         style: TextStyle(
                             color: Colors.white,
-                            fontSize: isDesktop ? 36 : 24,
-                            fontWeight: FontWeight.bold)),
+                            fontSize: getFluidSize(screenWidth,
+                                minSize: 20, maxSize: 36),
+                            fontWeight: FontWeight.bold),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 10),
                     if (isDesktop)
                       Text(cDesc,
@@ -176,8 +203,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFFFC107),
                           foregroundColor: Colors.black,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 12)),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: getFluidSize(screenWidth,
+                                  minSize: 14, maxSize: 24),
+                              vertical: getFluidSize(screenWidth,
+                                  minSize: 7, maxSize: 12))),
                       onPressed: () {
                         showDialog(
                             context: context,
@@ -189,8 +219,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 timeText: 'Pinned',
                                 logoText: 'UB'));
                       },
-                      child: const Text('View Details →',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: Text('View Details →',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: getFluidSize(screenWidth,
+                                  minSize: 12, maxSize: 14))),
                     ),
                   ],
                 ),
@@ -200,19 +233,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
         });
   }
 
-  Widget _buildLatestAnnouncementsSection(bool isDesktop) {
+  Widget _buildLatestAnnouncementsSection(double screenWidth) {
+    bool isDesktop = screenWidth > 1400;
+
     return StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('featured_sources')
             .snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting)
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
                 child: CircularProgressIndicator(color: Color(0xFF002147)));
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(
                 child: Text('Admin has not configured featured accounts yet.',
                     style: TextStyle(color: Colors.grey)));
+          }
 
           var allDocs = snapshot.data!.docs.toList();
           allDocs.removeWhere((doc) {
@@ -223,10 +260,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           allDocs.shuffle();
           var displayDocs = allDocs.take(3).toList();
 
-          if (displayDocs.isEmpty)
+          if (displayDocs.isEmpty) {
             return const Center(
                 child: Text('No valid featured accounts configured.',
                     style: TextStyle(color: Colors.grey)));
+          }
 
           List<Widget> rowChildren = [];
 
@@ -266,7 +304,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               profileUrl,
                               logoText,
                               orgId,
-                              isDesktop);
+                              screenWidth);
                         }
 
                         var postData = postSnapshot.data!.docs.first.data()
@@ -279,28 +317,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             profileUrl,
                             logoText,
                             orgId,
-                            isDesktop);
+                            screenWidth);
                       });
                 });
 
-            // Prevent flex wrap crash on mobile
             if (isDesktop) {
               rowChildren.add(Expanded(child: cardWidget));
             } else {
               rowChildren.add(Container(
-                  width: 280,
+                  width: 260,
                   margin: const EdgeInsets.only(right: 15),
                   child: cardWidget));
             }
 
-            if (isDesktop && i < displayDocs.length - 1)
+            if (isDesktop && i < displayDocs.length - 1) {
               rowChildren.add(const SizedBox(width: 15));
+            }
           }
 
+          // Uses structural isDesktop to decide between Row and ScrollView
           if (isDesktop) {
             return Row(children: rowChildren);
           } else {
-            // Allows horizontal scrolling on phones instead of crushing the layout
             return SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(children: rowChildren),
@@ -317,9 +355,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       String? profileUrl,
       String logoText,
       String orgId,
-      bool isDesktop) {
+      double screenWidth) {
     return Container(
-      height: 230,
+      height: getFluidSize(screenWidth, minSize: 200, maxSize: 230),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
           color: Colors.white,
@@ -333,27 +371,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
               AvatarWidget(
                   imageUrl: profileUrl,
                   logoText: logoText,
-                  size: 35,
-                  fontSize: 14),
+                  size: getFluidSize(screenWidth, minSize: 30, maxSize: 35),
+                  fontSize: 12),
               const SizedBox(width: 10),
               Expanded(
                   child: Text(source,
                       style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
-                          fontSize: 13),
+                          fontSize: 12),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis)),
             ],
           ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 8),
           Text(title,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize:
+                      getFluidSize(screenWidth, minSize: 14, maxSize: 16)),
               maxLines: 2,
               overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 8),
+          const SizedBox(height: 2),
           Text(desc,
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+              style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize:
+                      getFluidSize(screenWidth, minSize: 12, maxSize: 13)),
               maxLines: 2,
               overflow: TextOverflow.ellipsis),
           const Spacer(),
@@ -362,9 +406,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onTap: () {
                 List<String> imageUrls = [];
                 if (postData.containsKey('image_urls') &&
-                    postData['image_urls'] is List)
+                    postData['image_urls'] is List) {
                   imageUrls = List<String>.from(postData['image_urls']);
-                else if (postData.containsKey('image_url') &&
+                } else if (postData.containsKey('image_url') &&
                     postData['image_url'] != null &&
                     postData['image_url'].isNotEmpty)
                   imageUrls = [postData['image_url']];
@@ -386,18 +430,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         profileUrl: profileUrl,
                         logoText: logoText));
               },
-              child: const Text('Read More →',
+              child: Text('Read More →',
                   style: TextStyle(
                       color: Colors.red,
                       fontWeight: FontWeight.bold,
-                      fontSize: 14)),
+                      fontSize:
+                          getFluidSize(screenWidth, minSize: 12, maxSize: 14))),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildGlobalLiveFeed() {
+  Widget _buildGlobalLiveFeed(double screenWidth) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('organization_notices')
@@ -406,15 +451,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting &&
-            _postLimit == 10)
+            _postLimit == 10) {
           return const Center(
               child: Padding(
                   padding: EdgeInsets.all(20),
                   child: CircularProgressIndicator()));
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
+        }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return const Center(
               child: Text("No posts at this time.",
                   style: TextStyle(color: Colors.grey)));
+        }
 
         final posts = snapshot.data!.docs;
 
@@ -433,9 +480,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                 List<String> imageUrls = [];
                 if (postData.containsKey('image_urls') &&
-                    postData['image_urls'] is List)
+                    postData['image_urls'] is List) {
                   imageUrls = List<String>.from(postData['image_urls']);
-                else if (postData.containsKey('image_url') &&
+                } else if (postData.containsKey('image_url') &&
                     postData['image_url'] != null &&
                     postData['image_url'].isNotEmpty)
                   imageUrls = [postData['image_url']];
@@ -465,7 +512,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         color: Colors.white,
                         surfaceTintColor: Colors.transparent,
                         elevation: 0,
-                        margin: const EdgeInsets.only(bottom: 20),
+                        margin: const EdgeInsets.only(bottom: 15),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                             side: BorderSide(color: Colors.grey.shade200)),
@@ -484,7 +531,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     logoText: logoText));
                           },
                           child: Padding(
-                            padding: const EdgeInsets.all(20),
+                            padding: EdgeInsets.all(getFluidSize(screenWidth,
+                                minSize: 15, maxSize: 20)),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -493,8 +541,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     AvatarWidget(
                                         imageUrl: profileUrl,
                                         logoText: logoText,
-                                        size: 40,
-                                        fontSize: 14),
+                                        size: getFluidSize(screenWidth,
+                                            minSize: 35, maxSize: 40),
+                                        fontSize: 12),
                                     const SizedBox(width: 10),
                                     Expanded(
                                       child: Column(
@@ -502,33 +551,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(orgName,
-                                                style: const TextStyle(
-                                                    fontWeight:
-                                                        FontWeight.bold),
+                                                style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: getFluidSize(
+                                                        screenWidth,
+                                                        minSize: 12,
+                                                        maxSize: 14)),
                                                 maxLines: 1,
                                                 overflow:
                                                     TextOverflow.ellipsis),
                                             Text(timeText,
                                                 style: const TextStyle(
                                                     color: Colors.grey,
-                                                    fontSize: 12))
+                                                    fontSize: 11))
                                           ]),
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 15),
+                                const SizedBox(height: 8),
                                 Text(title,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 20)),
-                                const SizedBox(height: 5),
+                                        fontSize: getFluidSize(screenWidth,
+                                            minSize: 14, maxSize: 20))),
+                                const SizedBox(height: 2),
                                 Text(desc,
-                                    style: const TextStyle(
-                                        fontSize: 16, height: 1.5),
+                                    style: TextStyle(
+                                        fontSize: getFluidSize(screenWidth,
+                                            minSize: 12, maxSize: 16),
+                                        height: 1.4),
                                     maxLines: 3,
                                     overflow: TextOverflow.ellipsis),
                                 if (imageUrls.isNotEmpty) ...[
-                                  const SizedBox(height: 15),
+                                  const SizedBox(height: 12),
                                   _buildPostImageFeedGrid(imageUrls),
                                 ]
                               ],
@@ -690,7 +745,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildDynamicListSection(BuildContext context) {
+  Widget _buildDynamicListSection(BuildContext context, double screenWidth) {
     String currentCollection = _activeExploreTab;
     return Container(
       decoration: BoxDecoration(
@@ -705,9 +760,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     bottom: BorderSide(color: Colors.grey.shade300, width: 2))),
             child: Row(
               children: [
-                _buildExploreTabButton('Administration', 'administrations'),
-                _buildExploreTabButton('Departments', 'departments'),
-                _buildExploreTabButton('Organizations', 'organizations'),
+                _buildExploreTabButton(
+                    'Administration', 'administrations', screenWidth),
+                _buildExploreTabButton(
+                    'Departments', 'departments', screenWidth),
+                _buildExploreTabButton(
+                    'Organizations', 'organizations', screenWidth),
               ],
             ),
           ),
@@ -717,22 +775,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 .orderBy('name')
                 .snapshots(),
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting)
-                return const Padding(
-                    padding: EdgeInsets.all(40.0),
-                    child: Center(
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Padding(
+                    padding: EdgeInsets.all(getFluidSize(screenWidth,
+                        minSize: 20.0, maxSize: 40.0)),
+                    child: const Center(
                         child: CircularProgressIndicator(
                             color: Color(0xFF002147))));
-              if (snapshot.hasError)
+              }
+              if (snapshot.hasError) {
                 return Padding(
-                    padding: const EdgeInsets.all(40.0),
+                    padding: EdgeInsets.all(getFluidSize(screenWidth,
+                        minSize: 20.0, maxSize: 40.0)),
                     child: Center(child: Text('Error: ${snapshot.error}')));
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
+              }
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                 return Padding(
-                    padding: const EdgeInsets.all(40.0),
+                    padding: EdgeInsets.all(getFluidSize(screenWidth,
+                        minSize: 20.0, maxSize: 40.0)),
                     child: Center(
                         child: Text('No data found in "$currentCollection".',
                             style: const TextStyle(color: Colors.grey))));
+              }
 
               final docs = snapshot.data!.docs;
 
@@ -752,15 +816,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   String? profileUrl = data['profile_image_url'];
 
                   return ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 10),
+                    contentPadding: EdgeInsets.symmetric(
+                        horizontal:
+                            getFluidSize(screenWidth, minSize: 10, maxSize: 20),
+                        vertical:
+                            getFluidSize(screenWidth, minSize: 5, maxSize: 10)),
                     leading: AvatarWidget(
                         imageUrl: profileUrl,
                         logoText: logoText,
-                        size: 45,
+                        size:
+                            getFluidSize(screenWidth, minSize: 35, maxSize: 45),
                         fontSize: 12),
                     title: Text(name,
-                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: getFluidSize(screenWidth,
+                                minSize: 12, maxSize: 16))),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -806,13 +877,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildExploreTabButton(String title, String targetCollection) {
+  Widget _buildExploreTabButton(
+      String title, String targetCollection, double screenWidth) {
     bool isActive = _activeExploreTab == targetCollection;
     return Expanded(
       child: InkWell(
         onTap: () => setState(() => _activeExploreTab = targetCollection),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 15),
+          padding: EdgeInsets.symmetric(
+              vertical: getFluidSize(screenWidth, minSize: 12, maxSize: 15)),
           decoration: BoxDecoration(
               border: Border(
                   bottom: BorderSide(
@@ -825,6 +898,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   style: TextStyle(
                       fontWeight:
                           isActive ? FontWeight.bold : FontWeight.normal,
+                      fontSize:
+                          getFluidSize(screenWidth, minSize: 12, maxSize: 14),
                       color: isActive ? const Color(0xFF002147) : Colors.grey),
                   textAlign: TextAlign.center)),
         ),

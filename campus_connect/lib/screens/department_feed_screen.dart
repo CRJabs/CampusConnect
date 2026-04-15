@@ -157,11 +157,13 @@ class _DepartmentFeedScreenState extends State<DepartmentFeedScreen> {
             .doc(widget.orgId)
             .snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting)
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
                 child: CircularProgressIndicator(color: Color(0xFF002147)));
-          if (!snapshot.hasData || !snapshot.data!.exists)
+          }
+          if (!snapshot.hasData || !snapshot.data!.exists) {
             return const Center(child: Text('Profile not found.'));
+          }
 
           var data = snapshot.data!.data() as Map<String, dynamic>;
           String orgName = data['name'] ?? 'Unnamed Organization';
@@ -295,12 +297,13 @@ class _DepartmentFeedScreenState extends State<DepartmentFeedScreen> {
                                   builder: (context, postSnapshot) {
                                     if (postSnapshot.connectionState ==
                                             ConnectionState.waiting &&
-                                        _postLimit == 10)
+                                        _postLimit == 10) {
                                       return const Center(
                                           child: Padding(
                                               padding: EdgeInsets.all(20),
                                               child:
                                                   CircularProgressIndicator()));
+                                    }
                                     if (!postSnapshot.hasData ||
                                         postSnapshot.data!.docs.isEmpty) {
                                       return Container(
@@ -334,10 +337,10 @@ class _DepartmentFeedScreenState extends State<DepartmentFeedScreen> {
                                             List<String> imageUrls = [];
                                             if (postData.containsKey(
                                                     'image_urls') &&
-                                                postData['image_urls'] is List)
+                                                postData['image_urls'] is List) {
                                               imageUrls = List<String>.from(
                                                   postData['image_urls']);
-                                            else if (postData
+                                            } else if (postData
                                                     .containsKey('image_url') &&
                                                 postData['image_url'] != null &&
                                                 postData['image_url']

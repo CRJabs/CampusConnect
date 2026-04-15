@@ -28,11 +28,9 @@ class PostDetailScreen extends StatelessWidget {
     return Dialog(
       backgroundColor: Colors.white,
       surfaceTintColor: Colors.transparent,
-      // Fluid padding for mobile compatibility
       insetPadding: EdgeInsets.all(isDesktop ? 40 : 15),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
-        // --- FLUID CONSTRAINTS ---
         constraints: const BoxConstraints(maxWidth: 900),
         padding: EdgeInsets.all(isDesktop ? 30 : 20),
         child: SingleChildScrollView(
@@ -45,22 +43,21 @@ class PostDetailScreen extends StatelessWidget {
                   AvatarWidget(
                       imageUrl: profileUrl,
                       logoText: logoText,
-                      size: 40,
+                      size: isDesktop ? 40 : 35,
                       fontSize: 14),
                   const SizedBox(width: 10),
                   Expanded(
-                    // Prevent text overflow on small phones
                     child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(orgName,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 12),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis),
                           Text(timeText,
                               style: const TextStyle(
-                                  color: Colors.grey, fontSize: 12))
+                                  color: Colors.grey, fontSize: 11))
                         ]),
                   ),
                   IconButton(
@@ -68,14 +65,19 @@ class PostDetailScreen extends StatelessWidget {
                       onPressed: () => Navigator.pop(context)),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 8),
+              // --- FIX: Dynamic mobile font sizes ---
               Text(title,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 20)),
-              const SizedBox(height: 15),
-              Text(desc, style: const TextStyle(fontSize: 16, height: 1.6)),
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: isDesktop ? 24 : 14)),
+              const SizedBox(height: 2),
+              Text(desc,
+                  style: TextStyle(
+                      fontSize: isDesktop ? 16 : 12,
+                      height: isDesktop ? 1.6 : 1.4)),
               if (imageUrls.isNotEmpty) ...[
-                const SizedBox(height: 30),
+                const SizedBox(height: 20),
                 ...imageUrls.map((url) => Padding(
                       padding: const EdgeInsets.only(bottom: 20),
                       child: ClipRRect(

@@ -1,4 +1,4 @@
-import 'dart:async'; // --- NEW: Needed for Search Debouncer ---
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -14,17 +14,12 @@ class _FAQScreenState extends State<FAQScreen> {
   int _currentPage = 0;
   final int _itemsPerPage = 10;
 
-  // --- OPTIMIZATION 1: Search Debouncer ---
   Timer? _debounce;
-
-  // --- OPTIMIZATION 2: Persistent Stream ---
   late Stream<QuerySnapshot> _faqStream;
 
   @override
   void initState() {
     super.initState();
-    // Start the stream ONCE.
-    // We added the 'where' clause here so Firebase ONLY sends answered questions!
     _faqStream = FirebaseFirestore.instance
         .collection('faqs')
         .where('is_answered', isEqualTo: true)
@@ -128,16 +123,21 @@ class _FAQScreenState extends State<FAQScreen> {
 
   @override
   Widget build(BuildContext context) {
+    bool isDesktop = MediaQuery.of(context).size.width > 600;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 40),
+      // --- FIX: Dynamic Mobile Padding ---
+      padding:
+          EdgeInsets.symmetric(horizontal: isDesktop ? 100 : 20, vertical: 40),
       child: Column(
         children: [
           Image.asset(
             'assets/faq.png',
-            height: 100,
+            height: isDesktop ? 100 : 80,
             errorBuilder: (context, error, stackTrace) => Container(
-              height: 100,
-              width: 400,
+              height: isDesktop ? 100 : 80,
+              width: double.infinity,
+              constraints: const BoxConstraints(maxWidth: 400),
               decoration: BoxDecoration(
                   color: Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(12),
@@ -145,15 +145,15 @@ class _FAQScreenState extends State<FAQScreen> {
               alignment: Alignment.center,
               child: const Text('Add FAQ Banner Image Here',
                   style: TextStyle(
-                      color: Colors.grey, fontWeight: FontWeight.bold)),
+                      color: Colors.grey, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center),
             ),
           ),
           const SizedBox(height: 15),
           const Text('Find answers to your most common questions here!',
-              style: TextStyle(color: Colors.grey)),
+              style: TextStyle(color: Colors.grey),
+              textAlign: TextAlign.center),
           const SizedBox(height: 40),
-
-          // --- LIVE SEARCH FIELD ---
           Container(
             decoration: BoxDecoration(
                 color: Colors.white,
@@ -162,7 +162,6 @@ class _FAQScreenState extends State<FAQScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: TextField(
               onChanged: (value) {
-                // --- OPTIMIZATION 3: Search Debouncer applied ---
                 if (_debounce?.isActive ?? false) _debounce!.cancel();
                 _debounce = Timer(const Duration(milliseconds: 300), () {
                   setState(() {
@@ -179,20 +178,16 @@ class _FAQScreenState extends State<FAQScreen> {
             ),
           ),
           const SizedBox(height: 40),
-
           StreamBuilder<QuerySnapshot>(
-            stream: _faqStream, // Use the persistent stream initialized above
+            stream: _faqStream,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(
                     child: CircularProgressIndicator(color: Color(0xFF002147)));
               }
-
               if (snapshot.hasError) return Text('Error: ${snapshot.error}');
 
-              // Docs are ALREADY filtered to only answered ones by Firebase!
               var answeredDocs = snapshot.data?.docs ?? [];
-
               var searchResults = answeredDocs.where((doc) {
                 String q = (doc['question'] ?? '').toString().toLowerCase();
                 return q.contains(_searchQuery.toLowerCase());
@@ -200,7 +195,7 @@ class _FAQScreenState extends State<FAQScreen> {
 
               if (searchResults.isEmpty) {
                 return Container(
-                  padding: const EdgeInsets.all(50),
+                  padding: const EdgeInsets.all(30),
                   decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
@@ -210,20 +205,23 @@ class _FAQScreenState extends State<FAQScreen> {
                       const Icon(Icons.search_off,
                           size: 64, color: Colors.grey),
                       const SizedBox(height: 20),
-                      const Text("Can't find an answer to your question?",
+                      Text("Can't find an answer to your question?",
                           style: TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.bold)),
+                              fontSize: isDesktop ? 20 : 18,
+                              fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center),
                       const SizedBox(height: 10),
                       const Text(
                           "Send them here and our administration will respond.",
-                          style: TextStyle(color: Colors.grey)),
+                          style: TextStyle(color: Colors.grey),
+                          textAlign: TextAlign.center),
                       const SizedBox(height: 30),
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF002147),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 30, vertical: 20)),
+                                horizontal: 20, vertical: 15)),
                         onPressed: _submitNewQuestionDialog,
                         icon: const Icon(Icons.send),
                         label: const Text('Submit a Question',
@@ -241,17 +239,17 @@ class _FAQScreenState extends State<FAQScreen> {
 
               int startIndex = _currentPage * _itemsPerPage;
               int endIndex = startIndex + _itemsPerPage;
-              if (endIndex > searchResults.length)
+              if (endIndex > searchResults.length) {
                 endIndex = searchResults.length;
-
+              }
               var pagedResults = searchResults.sublist(startIndex, endIndex);
 
               return Column(
                 children: [
                   ...pagedResults.map((doc) {
                     var data = doc.data() as Map<String, dynamic>;
-                    return _buildFaqTile(
-                        data['question'] ?? '', data['answer'] ?? '');
+                    return _buildFaqTile(data['question'] ?? '',
+                        data['answer'] ?? '', isDesktop);
                   }),
                   if (totalPages > 1) ...[
                     const SizedBox(height: 30),
@@ -259,7 +257,7 @@ class _FAQScreenState extends State<FAQScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.arrow_back_ios),
+                          icon: const Icon(Icons.arrow_back_ios, size: 18),
                           color: _currentPage > 0
                               ? const Color(0xFF002147)
                               : Colors.grey,
@@ -271,7 +269,7 @@ class _FAQScreenState extends State<FAQScreen> {
                             style:
                                 const TextStyle(fontWeight: FontWeight.bold)),
                         IconButton(
-                          icon: const Icon(Icons.arrow_forward_ios),
+                          icon: const Icon(Icons.arrow_forward_ios, size: 18),
                           color: _currentPage < totalPages - 1
                               ? const Color(0xFF002147)
                               : Colors.grey,
@@ -291,7 +289,7 @@ class _FAQScreenState extends State<FAQScreen> {
     );
   }
 
-  Widget _buildFaqTile(String question, String answer) {
+  Widget _buildFaqTile(String question, String answer, bool isDesktop) {
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       decoration: BoxDecoration(
@@ -299,16 +297,20 @@ class _FAQScreenState extends State<FAQScreen> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.grey.shade200)),
       child: ExpansionTile(
+        // --- FIX: Dynamic mobile font sizes ---
         title: Text(question,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            style: TextStyle(
+                fontWeight: FontWeight.bold, fontSize: isDesktop ? 16 : 14)),
         children: [
           Padding(
             padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
             child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(answer,
-                    style:
-                        TextStyle(color: Colors.grey.shade700, height: 1.5))),
+                    style: TextStyle(
+                        color: Colors.grey.shade700,
+                        height: 1.5,
+                        fontSize: isDesktop ? 14 : 13))),
           ),
         ],
       ),

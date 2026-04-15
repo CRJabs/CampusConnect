@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/image_uploader.dart';
+import '../utils/activity_logger.dart';
 
 class EditHighlightDialog extends StatefulWidget {
   final String? docId;
@@ -231,11 +232,20 @@ class _EditHighlightDialogState extends State<EditHighlightDialog> {
                             await FirebaseFirestore.instance
                                 .collection('highlights')
                                 .add(payload);
+                            await ActivityLogger.log(
+                              'Created highlight: ${_carouselTitleCtrl.text.trim()}',
+                              source: 'Highlights',
+                            );
                           } else {
                             await FirebaseFirestore.instance
                                 .collection('highlights')
                                 .doc(widget.docId)
                                 .update(payload);
+                            await ActivityLogger.log(
+                              'Updated highlight: ${_carouselTitleCtrl.text.trim()}',
+                              source: 'Highlights',
+                              targetId: widget.docId,
+                            );
                           }
 
                           if (!context.mounted) return;

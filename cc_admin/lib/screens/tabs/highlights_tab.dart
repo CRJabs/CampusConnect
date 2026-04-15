@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../utils/admin_dialogs.dart';
+import '../../utils/activity_logger.dart';
 import '../../widgets/edit_highlight_dialog.dart';
 
 class HighlightsTab extends StatefulWidget {
@@ -129,11 +130,16 @@ class _HighlightsTabState extends State<HighlightsTab>
                               onPressed: () => AdminDialogs.confirmDelete(
                                       context,
                                       "Highlight: ${data['carousel_title']}",
-                                      () {
-                                    FirebaseFirestore.instance
+                                      () async {
+                                    await FirebaseFirestore.instance
                                         .collection('highlights')
                                         .doc(doc.id)
                                         .delete();
+                                    await ActivityLogger.log(
+                                      'Deleted highlight: ${data['carousel_title']}',
+                                      source: 'Highlights',
+                                      targetId: doc.id,
+                                    );
                                   }),
                               icon: const Icon(Icons.delete, size: 18),
                               label: const Text('Delete')),

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'admin_page.dart';
 import 'profile_page.dart';
+import '../utils/activity_logger.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -95,6 +96,11 @@ class _LoginScreenState extends State<LoginScreen> {
       });
 
       String role = userDoc.get('role');
+      await ActivityLogger.log(
+        'Login success: ${_emailController.text.trim()} (${role.toUpperCase()})',
+        source: 'Authentication',
+        targetId: uid,
+      );
 
       if (!mounted) return;
 

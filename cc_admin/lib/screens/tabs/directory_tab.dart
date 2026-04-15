@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../utils/admin_dialogs.dart';
+import '../../utils/activity_logger.dart';
 
 class DirectoryTab extends StatefulWidget {
   const DirectoryTab({super.key});
@@ -251,6 +252,14 @@ class _DirectoryTabState extends State<DirectoryTab>
                                           }
                                           await batch.commit();
                                         }
+                                        await ActivityLogger.log(
+                                          'Deleted ${data['name']} from $_activeDirectoryTab',
+                                          source: 'Directory',
+                                          targetId: doc.id,
+                                          metadata: {
+                                            'deleted_notices': notices.docs.length
+                                          },
+                                        );
                                       }),
                                   icon: const Icon(Icons.delete, size: 18),
                                   label: const Text('Delete')),

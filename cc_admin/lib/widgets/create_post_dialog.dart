@@ -4,6 +4,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import '../utils/activity_logger.dart';
 
 class CreatePostDialog extends StatefulWidget {
   final String targetId;
@@ -26,7 +27,7 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
 
   bool _isPosting = false;
   int _uploadingCount = 0;
-  List<String> _uploadedImageUrls = [];
+  final List<String> _uploadedImageUrls = [];
 
   Future<void> _handleMultiImageUpload() async {
     final ImagePicker picker = ImagePicker();
@@ -64,9 +65,10 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
     int remainingSlots = 100 - currentCount;
 
     if (remainingSlots <= 0) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('Upload limit of 100 images reached.')));
+      }
       return;
     }
 
@@ -118,13 +120,20 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
           .collection(widget.targetCollection)
           .doc(widget.targetId)
           .update({'new_notices_count': FieldValue.increment(1)});
+      await ActivityLogger.log(
+        'Published announcement: ${_titleCtrl.text.trim()}',
+        source: 'Posts',
+        targetId: widget.targetId,
+        metadata: {'image_count': _uploadedImageUrls.length},
+      );
 
       if (!mounted) return;
       Navigator.pop(context);
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
       setState(() => _isPosting = false);
     }
   }

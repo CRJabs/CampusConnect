@@ -60,10 +60,9 @@ class _CampusLayoutState extends State<CampusLayout> {
   @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
-    bool isDesktop = screenWidth > 800;
+    bool isDesktop = screenWidth > 1200;
 
-    // --- FIX: Reduced app bar height on mobile to remove dead space ---
-    double appBarHeight = isDesktop ? 100 : 130;
+    double appBarHeight = isDesktop ? 100 : 70;
 
     return Listener(
       behavior: HitTestBehavior.translucent,
@@ -75,12 +74,19 @@ class _CampusLayoutState extends State<CampusLayout> {
           preferredSize: Size.fromHeight(appBarHeight),
           child: _buildTopNav(isDesktop),
         ),
-        body: IndexedStack(
-          index: _currentIndex,
-          children: _screens,
+        // --- FIX: Moved from bottomNavigationBar into a Column body ---
+        // This stops the Scaffold from cutting off the overflowing images!
+        body: Column(
+          children: [
+            Expanded(
+              child: IndexedStack(
+                index: _currentIndex,
+                children: _screens,
+              ),
+            ),
+            _buildFooter(isDesktop),
+          ],
         ),
-        bottomNavigationBar:
-            _buildFooter(isDesktop), // Pass responsiveness check
       ),
     );
   }
@@ -88,13 +94,11 @@ class _CampusLayoutState extends State<CampusLayout> {
   Widget _buildTopNav(bool isDesktop) {
     Widget logoWidget = Image.asset(
       'assets/logo.png',
-      height: isDesktop
-          ? 50
-          : 40, // --- FIX: Scale down logo slightly on phones ---
+      height: 50,
       errorBuilder: (context, error, stackTrace) {
         return Container(
-          height: isDesktop ? 50 : 40,
-          width: isDesktop ? 250 : 200,
+          height: 50,
+          width: 250,
           decoration: BoxDecoration(
             color: Colors.grey.shade200,
             borderRadius: BorderRadius.circular(8),
@@ -128,25 +132,13 @@ class _CampusLayoutState extends State<CampusLayout> {
     return Container(
       color: const Color(0xFF002147),
       padding: EdgeInsets.symmetric(
-          vertical: isDesktop ? 20 : 15,
-          // --- FIX: Drastically reduced horizontal padding on mobile to stop layout breaking ---
-          horizontal: isDesktop ? 40 : 10),
+          vertical: isDesktop ? 20 : 10, horizontal: isDesktop ? 40 : 10),
       child: isDesktop
           ? Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                logoWidget,
-                buttonsWidget,
-              ],
+              children: [logoWidget, buttonsWidget],
             )
-          : Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Center(child: logoWidget),
-                const SizedBox(height: 12), // Tighter spacing
-                Center(child: buttonsWidget),
-              ],
-            ),
+          : Center(child: buttonsWidget),
     );
   }
 
@@ -158,7 +150,6 @@ class _CampusLayoutState extends State<CampusLayout> {
         setState(() => _currentIndex = index);
       },
       child: Container(
-        // --- FIX: Shrunk the massive 20px padding to 12px on mobile to squeeze buttons together cleanly ---
         padding: EdgeInsets.symmetric(
             horizontal: isDesktop ? 20 : 12, vertical: isDesktop ? 10 : 8),
         decoration: BoxDecoration(
@@ -168,14 +159,14 @@ class _CampusLayoutState extends State<CampusLayout> {
         child: Row(
           children: [
             Icon(icon,
-                size: isDesktop ? 18 : 16, // Shrink icon on mobile
+                size: isDesktop ? 18 : 16,
                 color: isActive ? Colors.white : Colors.black87),
             const SizedBox(width: 6),
             Text(
               title,
               style: TextStyle(
                 color: isActive ? Colors.white : Colors.black87,
-                fontSize: isDesktop ? 14 : 12, // Shrink text on mobile
+                fontSize: isDesktop ? 14 : 12,
                 fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
               ),
             ),
@@ -186,20 +177,47 @@ class _CampusLayoutState extends State<CampusLayout> {
   }
 
   Widget _buildFooter(bool isDesktop) {
-    return Container(
-      color: const Color(0xFF002147),
-      // --- FIX: Thinner footer on mobile ---
-      padding: EdgeInsets.symmetric(
-          vertical: isDesktop ? 20 : 12, horizontal: isDesktop ? 40 : 10),
-      child: Text(
-        '© 2026 University of Bohol • CampusConnect\nSCHOLARSHIP • CHARACTER • SERVICE',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-            color: Colors.white70,
-            fontSize:
-                isDesktop ? 12 : 10 // Shrink text on mobile to prevent wrapping
-            ),
-      ),
+    // --- FIX: Stack is now the root widget and allows overflow ---
+    return Stack(
+      clipBehavior: Clip.none, // CRITICAL: This allows the image to break out
+      alignment: Alignment.bottomCenter, // Anchor everything to the bottom edge
+      children: [
+        // 1. The Blue Background and Text
+        Container(
+          width: double.infinity,
+          color: const Color(0xFF002147),
+          padding: EdgeInsets.symmetric(
+              vertical: isDesktop ? 35 : 30, horizontal: isDesktop ? 120 : 60),
+        ),
+
+        // 2. Bottom Left Image (Overflowing)
+        Positioned(
+          left: isDesktop ? 40 : 15,
+          bottom: 10, // Anchored to the bottom edge of the blue container
+          child: Image.asset(
+            'assets/footerLeft.png',
+            // Increase this height number to make the image poke out even more!
+            height: isDesktop ? 50 : 35,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) =>
+                const SizedBox.shrink(),
+          ),
+        ),
+
+        // 3. Bottom Right Image (Overflowing)
+        Positioned(
+          right: isDesktop ? 0 : 0,
+          bottom: 0, // Anchored to the bottom edge of the blue container
+          child: Image.asset(
+            'assets/footerRight.png',
+            // Increase this height number to make the image poke out even more!
+            height: isDesktop ? 100 : 70,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) =>
+                const SizedBox.shrink(),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1,6 +1,8 @@
+import 'dart:async'; // --- NEW IMPORT ---
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../utils/admin_dialogs.dart';
+import '../../utils/activity_logger.dart';
 
 class FaqTab extends StatefulWidget {
   const FaqTab({super.key});
@@ -16,10 +18,21 @@ class _FaqTabState extends State<FaqTab> with AutomaticKeepAliveClientMixin {
   bool _isShowingAnsweredFaqs = false;
   late Stream<QuerySnapshot> _faqStream;
 
+  // --- NEW SEARCH VARIABLES ---
+  final TextEditingController _searchCtrl = TextEditingController();
+  Timer? _debounce;
+
   @override
   void initState() {
     super.initState();
     _updateStream();
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    _debounce?.cancel();
+    super.dispose();
   }
 
   void _updateStream() {
@@ -68,6 +81,7 @@ class _FaqTabState extends State<FaqTab> with AutomaticKeepAliveClientMixin {
                   child: InkWell(
                     onTap: () => setState(() {
                       _isShowingAnsweredFaqs = false;
+                      _searchCtrl.clear(); // Clear search on tab switch
                       _updateStream();
                     }),
                     child: Container(
@@ -95,6 +109,7 @@ class _FaqTabState extends State<FaqTab> with AutomaticKeepAliveClientMixin {
                   child: InkWell(
                     onTap: () => setState(() {
                       _isShowingAnsweredFaqs = true;
+                      _searchCtrl.clear(); // Clear search on tab switch
                       _updateStream();
                     }),
                     child: Container(
@@ -122,6 +137,32 @@ class _FaqTabState extends State<FaqTab> with AutomaticKeepAliveClientMixin {
             ),
           ),
           const SizedBox(height: 20),
+
+          // --- NEW: SEARCH BAR ---
+          TextField(
+            controller: _searchCtrl,
+            decoration: InputDecoration(
+              hintText: 'Search questions or answers...',
+              prefixIcon: const Icon(Icons.search, color: Colors.grey),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(vertical: 15),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey.shade300)),
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey.shade300)),
+            ),
+            onChanged: (val) {
+              if (_debounce?.isActive ?? false) _debounce!.cancel();
+              _debounce = Timer(const Duration(milliseconds: 300), () {
+                setState(() {});
+              });
+            },
+          ),
+          const SizedBox(height: 20),
+
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: _faqStream,
@@ -138,12 +179,31 @@ class _FaqTabState extends State<FaqTab> with AutomaticKeepAliveClientMixin {
 
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return Center(
-                      child: Text(_isShowingAnsweredFaqs
-                          ? 'No answered FAQs available.'
-                          : 'No pending questions waiting. You\'re all caught up!'));
+                      child: Text(
+                          _isShowingAnsweredFaqs
+                              ? 'No answered FAQs available.'
+                              : 'No pending questions waiting. You\'re all caught up!',
+                          style: const TextStyle(color: Colors.grey)));
                 }
 
                 var docs = snapshot.data!.docs;
+
+                // --- NEW: FILTER LOGIC ---
+                if (_searchCtrl.text.isNotEmpty) {
+                  String query = _searchCtrl.text.toLowerCase();
+                  docs = docs.where((doc) {
+                    var data = doc.data() as Map<String, dynamic>;
+                    String q = (data['question'] ?? '').toLowerCase();
+                    String a = (data['answer'] ?? '').toLowerCase();
+                    return q.contains(query) || a.contains(query);
+                  }).toList();
+                }
+
+                if (docs.isEmpty) {
+                  return const Center(
+                      child: Text('No results match your search.',
+                          style: TextStyle(color: Colors.grey)));
+                }
 
                 return ListView.builder(
                   itemCount: docs.length,
@@ -223,11 +283,16 @@ class _FaqTabState extends State<FaqTab> with AutomaticKeepAliveClientMixin {
                                 style: TextButton.styleFrom(
                                     foregroundColor: Colors.red),
                                 onPressed: () => AdminDialogs.confirmDelete(
-                                        context, "FAQ: $q", () {
-                                      FirebaseFirestore.instance
+                                        context, "FAQ: $q", () async {
+                                      await FirebaseFirestore.instance
                                           .collection('faqs')
                                           .doc(doc.id)
                                           .delete();
+                                      await ActivityLogger.log(
+                                        'Deleted FAQ: $q',
+                                        source: 'FAQ',
+                                        targetId: doc.id,
+                                      );
                                     }),
                                 icon: const Icon(Icons.delete, size: 18),
                                 label: const Text('Delete')),

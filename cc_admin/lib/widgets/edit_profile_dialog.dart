@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/image_uploader.dart';
+import '../utils/activity_logger.dart';
 
 class EditProfileDialog extends StatefulWidget {
   final String targetCollection;
@@ -65,9 +66,9 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
   // --- UPDATED: Takes an integer to handle 3 different upload targets ---
   Future<void> _handleUpload(int imageType) async {
     setState(() {
-      if (imageType == 0)
+      if (imageType == 0) {
         _isUploadingProfile = true;
-      else if (imageType == 1)
+      } else if (imageType == 1)
         _isUploadingHeader = true;
       else
         _isUploadingBg = true;
@@ -83,9 +84,9 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
 
     if (uploadedUrl != null && mounted) {
       setState(() {
-        if (imageType == 0)
+        if (imageType == 0) {
           _finalProfileUrl = uploadedUrl;
-        else if (imageType == 1)
+        } else if (imageType == 1)
           _finalHeaderUrl = uploadedUrl;
         else
           _finalBgUrl = uploadedUrl;
@@ -94,9 +95,9 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
 
     if (mounted) {
       setState(() {
-        if (imageType == 0)
+        if (imageType == 0) {
           _isUploadingProfile = false;
-        else if (imageType == 1)
+        } else if (imageType == 1)
           _isUploadingHeader = false;
         else
           _isUploadingBg = false;
@@ -309,12 +310,18 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                               'bg_image_url':
                                   _finalBgUrl, // --- NEW: Push to Firestore ---
                             });
+                            await ActivityLogger.log(
+                              'Updated profile details: ${_nameCtrl.text.trim()}',
+                              source: 'Profile',
+                              targetId: widget.targetId,
+                            );
                             if (!context.mounted) return;
                             Navigator.pop(context);
                           } catch (e) {
-                            if (context.mounted)
+                            if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(content: Text('Save Error: $e')));
+                            }
                             setState(() => _isSaving = false);
                           }
                         }
