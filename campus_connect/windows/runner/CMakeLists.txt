@@ -16,6 +16,9 @@ add_executable(${BINARY_NAME} WIN32
   "runner.exe.manifest"
 )
 
+# Set the output name of the executable.
+set_target_properties(${BINARY_NAME} PROPERTIES OUTPUT_NAME "ub_campus_connect")
+
 # Apply the standard set of build settings. This can be removed for applications
 # that need different build settings.
 apply_standard_settings(${BINARY_NAME})

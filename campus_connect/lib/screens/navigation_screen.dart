@@ -16,87 +16,319 @@ class _NavigationScreenState extends State<NavigationScreen> {
 
   final List<Map<String, dynamic>> _buildings = [
     {
-      'name': "Founder's Building",
+      'name': "Founders Building",
       'icon': Icons.school,
       'floors': [
         {
-          'name': 'First Floor',
+          'name': '1st Floor',
           'rooms': [
-            {'code': 'Room F101', 'name': 'General Classroom'},
-            {'code': 'Room F102', 'name': 'Faculty Office'},
-            {'code': 'Room F103', 'name': 'Student Lounge'},
+            {'code': '', 'name': 'Office of the Dean, College of Education'},
+            {'code': '', 'name': 'Office of the Dean, College of Liberal Arts'},
+            {'code': '', 'name': 'Founders Student Lounge'},
+            {'code': '', 'name': 'UB Plaza'},
+            {'code': '', 'name': 'Founders Building Entrance/Exit Gate'},
           ]
         },
         {
-          'name': 'Second Floor',
+          'name': '2nd Floor',
           'rooms': [
-            {'code': 'Room F201', 'name': 'IT Laboratory'},
-            {'code': 'Room F202', 'name': 'Server Room'},
-            {'code': 'Room F203', 'name': 'Multimedia Room'},
+            {'code': '', 'name': 'Experimental Psychology Laboratory'},
+            {'code': '', 'name': 'Office of the Dean, Planning'},
+            {'code': '', 'name': 'Office of Vice President for Academics'},
           ]
         },
         {
-          'name': 'Third Floor',
+          'name': '3rd Floor',
           'rooms': [
-            {'code': 'Room F301', 'name': 'CETAFA Industrial Engineering Lab'},
-            {'code': 'Room F302', 'name': 'Drafting Room'},
-            {'code': 'Room F303', 'name': 'Robotics Lab'},
+            {'code': '', 'name': 'Music Room'},
+            {'code': '', 'name': 'TLE Laboratory'},
+            {'code': '', 'name': 'I.E. Laboratory'},
           ]
         },
       ]
     },
     {
-      'name': "Achiever's Building",
+      'name': "Achievers Building",
       'icon': Icons.emoji_events,
       'floors': [
-        {'name': 'First Floor', 'rooms': [{'code': 'Room A101', 'name': 'Placeholder Room'}]},
-        {'name': 'Second Floor', 'rooms': [{'code': 'Room A201', 'name': 'Placeholder Room'}]},
-        {'name': 'Third Floor', 'rooms': [{'code': 'Room A301', 'name': 'Placeholder Room'}]},
+        {
+          'name': '1st Floor',
+          'rooms': [
+            {'code': '', 'name': 'Dental & Medical Clinic'},
+            {'code': '', 'name': 'Hydraulic Laboratory'},
+            {'code': '', 'name': 'Machine Shop'},
+            {'code': '', 'name': 'AMT Laboratory'},
+            {'code': '', 'name': 'AMT Office'},
+            {'code': '', 'name': 'Soil Mechanics Laboratory'},
+            {'code': '', 'name': 'Surveying Instrument Room'},
+            {'code': '', 'name': 'Boiler'},
+          ]
+        },
+        {
+          'name': '2nd Floor',
+          'rooms': [
+            {'code': '', 'name': 'Office of the University Research Center'},
+            {'code': '', 'name': 'Electrical Laboratory'},
+            {'code': '', 'name': 'Electronics Laboratory'},
+            {'code': '', 'name': 'Digital & Microprocessor Laboratory'},
+            {'code': '', 'name': 'Mechanical Engineering Laboratory'},
+          ]
+        },
+        {
+          'name': '3rd Floor',
+          'rooms': [
+            {'code': '', 'name': 'Achievers Hall Conference Room'},
+            {'code': '', 'name': 'Office of the Dean, College of Engineering, Technology, Architecture and Fine Arts'},
+          ]
+        },
       ]
     },
     {
-      'name': 'Diamond Building',
-      'icon': Icons.diamond,
+      'name': 'Administration Building',
+      'icon': Icons.business,
       'floors': [
-        {'name': 'First Floor', 'rooms': [{'code': 'Room D101', 'name': 'Placeholder Room'}]},
-        {'name': 'Second Floor', 'rooms': [{'code': 'Room D201', 'name': 'Placeholder Room'}]},
-        {'name': 'Third Floor', 'rooms': [{'code': 'Room D301', 'name': 'Placeholder Room'}]},
+        {
+          'name': 'Basement',
+          'rooms': [
+            {'code': '', 'name': 'Instructional Media Center'},
+            {'code': '', 'name': 'Electrical Control Room'},
+            {'code': '', 'name': 'UBSSG Office'},
+            {'code': '', 'name': 'Deans Office, College of Business & Accountancy'},
+            {'code': '', 'name': 'Office of the Head Security & Safety Officer'},
+            {'code': '', 'name': 'Civic Welfare Training Services (CWTS) Office'},
+          ]
+        },
+        {
+          'name': '1st Floor',
+          'rooms': [
+            {'code': '', 'name': 'Office of the President'},
+            {'code': '', 'name': 'Office of the Vice President for Administration'},
+            {'code': '', 'name': 'Office of the School Registrar'},
+            {'code': '', 'name': 'Iluminadas Home'},
+            {'code': '', 'name': 'Tourism Hospitality Management (THM) Laboratory'},
+            {'code': '', 'name': 'Conference Room 1'},
+          ]
+        },
+        {
+          'name': '2nd Floor',
+          'rooms': [
+            {'code': '', 'name': 'Office of the Dean, College of Tourism Hospitality Management, Nutrition & Dietetics'},
+            {'code': '', 'name': 'Office of the Dean, College of Pharmacy'},
+            {'code': '', 'name': 'MIS Office'},
+            {'code': '', 'name': 'Speech Clinic'},
+            {'code': '', 'name': 'Computer Lab D (High School Computer Lab.)'},
+          ]
+        },
+        {
+          'name': '3rd Floor',
+          'rooms': [
+            {'code': '', 'name': 'Zoology Laboratory'},
+            {'code': '', 'name': 'Botany Laboratory'},
+            {'code': '', 'name': 'Computer Lab A, Lab. B, Lab. C'},
+            {'code': '', 'name': 'Biochemistry Laboratory'},
+          ]
+        },
+        {
+          'name': '4th Floor',
+          'rooms': [
+            {'code': '', 'name': 'Dance Hall'},
+            {'code': '', 'name': 'College Physics Laboratory'},
+            {'code': '', 'name': 'College Chemistry Laboratory'},
+          ]
+        },
       ]
     },
     {
-      'name': 'IRC Building',
+      'name': 'Admin Annex & GASA Bldg',
+      'icon': Icons.business_center,
+      'floors': [
+        {
+          'name': 'Basement',
+          'rooms': [{'code': '', 'name': 'Purchasing Office'}]
+        },
+        {
+          'name': '1st Floor',
+          'rooms': [
+            {'code': '', 'name': 'Conference Room 2'},
+            {'code': '', 'name': 'Office of the Vice President for Finance'},
+            {'code': '', 'name': 'Tellering'},
+            {'code': '', 'name': 'Office of the Property Custodian'},
+            {'code': '', 'name': 'Office of the Manager, General Services'},
+          ]
+        },
+        {
+          'name': '2nd Floor',
+          'rooms': [
+            {'code': '', 'name': 'High School Physics Laboratory'},
+            {'code': '', 'name': 'High School Chemistry Laboratory'},
+            {'code': '', 'name': 'High School TLE'},
+          ]
+        },
+      ]
+    },
+    {
+      'name': 'Information Resource Center',
       'icon': Icons.menu_book,
       'floors': [
-        {'name': 'First Floor', 'rooms': [{'code': 'Room I101', 'name': 'Placeholder Room'}]},
-        {'name': 'Second Floor', 'rooms': [{'code': 'Room I201', 'name': 'Placeholder Room'}]},
-        {'name': 'Third Floor', 'rooms': [{'code': 'Room I301', 'name': 'Placeholder Room'}]},
+        {
+          'name': 'Basement',
+          'rooms': [
+            {'code': '', 'name': 'CYDEM Quarters (Janitorials)'},
+            {'code': '', 'name': 'Vacant Classrooms'},
+          ]
+        },
+        {
+          'name': '1st Floor',
+          'rooms': [
+            {'code': '', 'name': 'Office of the Dean, Student Personnel Services'},
+            {'code': '', 'name': 'Guidance'},
+            {'code': '', 'name': 'Student Affairs Office'},
+            {'code': '', 'name': 'Athletics Coordinator'},
+            {'code': '', 'name': 'Office of the Dean, Graduate School and Professional Studies'},
+            {'code': '', 'name': 'Graduate School'},
+            {'code': '', 'name': 'Oral Defense Room'},
+          ]
+        },
+        {
+          'name': '2nd Floor',
+          'rooms': [{'code': '', 'name': 'Main Library'}]
+        },
+        {
+          'name': '3rd Floor',
+          'rooms': [
+            {'code': '', 'name': 'e-Library'},
+            {'code': '', 'name': 'IRC Auditorium'},
+            {'code': '', 'name': 'Periodical Library'},
+          ]
+        },
       ]
     },
     {
       'name': 'High School Building',
       'icon': Icons.auto_stories,
       'floors': [
-        {'name': 'First Floor', 'rooms': [{'code': 'Room H101', 'name': 'Placeholder Room'}]},
-        {'name': 'Second Floor', 'rooms': [{'code': 'Room H201', 'name': 'Placeholder Room'}]},
-        {'name': 'Third Floor', 'rooms': [{'code': 'Room H301', 'name': 'Placeholder Room'}]},
+        {
+          'name': '1st Floor',
+          'rooms': [
+            {'code': '', 'name': 'Activity Center'},
+          ]
+        },
+        {
+          'name': '2nd Floor',
+          'rooms': [
+            {'code': '', 'name': 'Office of the Principal, Junior High School'},
+            {'code': '', 'name': 'Guidance Office (High School)'},
+          ]
+        },
       ]
     },
     {
-      'name': 'Old High School Building',
-      'icon': Icons.history_edu,
+      'name': 'Diamond Building',
+      'icon': Icons.diamond,
       'floors': [
-        {'name': 'First Floor', 'rooms': [{'code': 'Room O101', 'name': 'Placeholder Room'}]},
-        {'name': 'Second Floor', 'rooms': [{'code': 'Room O201', 'name': 'Placeholder Room'}]},
-        {'name': 'Third Floor', 'rooms': [{'code': 'Room O301', 'name': 'Placeholder Room'}]},
+        {
+          'name': 'Basement',
+          'rooms': [
+            {'code': '', 'name': 'High School Library'},
+            {'code': '', 'name': 'Office of the Marketing, Alumni Affairs, Public Relations Officer'},
+            {'code': '', 'name': 'Carpark Entrance/Exit'},
+          ]
+        },
+        {
+          'name': '2nd Floor',
+          'rooms': [
+            {'code': '', 'name': 'Preparation Room'},
+          ]
+        },
+        {
+          'name': '3rd Floor',
+          'rooms': [
+            {'code': '', 'name': 'Faculty Office Nursing & Midwifery'},
+            {'code': '', 'name': 'Anatomy & Physiology Laboratory'},
+            {'code': '', 'name': 'Dispensing Room'},
+            {'code': '', 'name': 'Microbiology Laboratory'},
+            {'code': '', 'name': 'Office of the Dean, College of Nursing'},
+            {'code': '', 'name': 'Office of the Dean, College of Midwifery'},
+            {'code': '', 'name': 'Faculty Lounge'},
+            {'code': '', 'name': 'Storage Room'},
+            {'code': '', 'name': 'Nutrition Lecture Room'},
+            {'code': '', 'name': 'Nutrition Laboratory'},
+            {'code': '', 'name': 'Community Health Nursing'},
+          ]
+        },
+        {
+          'name': '4th Floor',
+          'rooms': [
+            {'code': '', 'name': 'General Ward'},
+            {'code': '', 'name': 'Ortho Room'},
+            {'code': '', 'name': 'Isolation Room'},
+            {'code': '', 'name': 'Central Supply Room'},
+            {'code': '', 'name': 'Skills Laboratory'},
+          ]
+        },
       ]
     },
     {
       'name': 'Science & Tech Building',
       'icon': Icons.biotech,
       'floors': [
-        {'name': 'First Floor', 'rooms': [{'code': 'Room S101', 'name': 'Placeholder Room'}]},
-        {'name': 'Second Floor', 'rooms': [{'code': 'Room S201', 'name': 'Placeholder Room'}]},
-        {'name': 'Third Floor', 'rooms': [{'code': 'Room S301', 'name': 'Placeholder Room'}]},
+        {
+          'name': 'Basement',
+          'rooms': [
+            {'code': '', 'name': 'Electrical Control Room'},
+            {'code': '', 'name': 'Basket Ball Court'},
+            {'code': '', 'name': 'P.E. Office'},
+            {'code': '', 'name': 'Fitness Gym'},
+            {'code': '', 'name': 'Entrance/Exit Gate'},
+          ]
+        },
+        {
+          'name': '1st Floor',
+          'rooms': [
+            {'code': '', 'name': 'Entrance/ Exit'},
+            {'code': '', 'name': 'CPTOT Rehab. Center'},
+            {'code': '', 'name': 'Varsitarian Office'},
+          ]
+        },
+        {
+          'name': '2nd Floor',
+          'rooms': [
+            {'code': '', 'name': 'Office of the Dean, College of Physical Therapy & Occupational Therapy'},
+            {'code': '', 'name': 'CPTOT Laboratory'},
+          ]
+        },
+        {
+          'name': '3rd Floor',
+          'rooms': [
+            {'code': '', 'name': 'Office of the Dean, Criminal Justice'},
+            {'code': '', 'name': 'Mock Court'},
+            {'code': '', 'name': 'FSLA Laboratory A, B'},
+            {'code': '', 'name': 'Judo Room'},
+            {'code': '', 'name': 'Balistic Laboratory'},
+          ]
+        },
+        {
+          'name': '4th Floor',
+          'rooms': [
+            {'code': '', 'name': 'Office of the Head, Architecture and Fine Arts'},
+            {'code': '', 'name': 'Computer Room'},
+            {'code': '', 'name': 'Nude Room'},
+            {'code': '', 'name': 'Drafting Rooms'},
+          ]
+        },
+      ]
+    },
+    {
+      'name': 'Old High School Building',
+      'icon': Icons.history_edu,
+      'floors': [
+        {
+          'name': 'Main Floor',
+          'rooms': [
+            {'code': '', 'name': 'Vacant classrooms'},
+            {'code': '', 'name': 'Temporary Storage Rooms'},
+          ]
+        },
       ]
     },
   ];
@@ -399,14 +631,16 @@ class _NavigationScreenState extends State<NavigationScreen> {
                       children: [
                         const Icon(Icons.meeting_room, size: 12, color: Colors.blueGrey),
                         const SizedBox(width: 8),
-                        SizedBox(
-                          width: 70,
-                          child: Text(
-                            room['code'],
-                            style: TextStyle(fontSize: 10, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+                        if (room['code'] != null && (room['code'] as String).isNotEmpty) ...[
+                          SizedBox(
+                            width: 70,
+                            child: Text(
+                              room['code'],
+                              style: TextStyle(fontSize: 10, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
+                          const SizedBox(width: 8),
+                        ],
                         Expanded(
                           child: Text(
                             room['name'],
