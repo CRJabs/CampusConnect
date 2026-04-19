@@ -68,10 +68,11 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     setState(() {
       if (imageType == 0) {
         _isUploadingProfile = true;
-      } else if (imageType == 1)
+      } else if (imageType == 1) {
         _isUploadingHeader = true;
-      else
+      } else {
         _isUploadingBg = true;
+      }
     });
 
     String fileName =
@@ -86,10 +87,11 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
       setState(() {
         if (imageType == 0) {
           _finalProfileUrl = uploadedUrl;
-        } else if (imageType == 1)
+        } else if (imageType == 1) {
           _finalHeaderUrl = uploadedUrl;
-        else
+        } else {
           _finalBgUrl = uploadedUrl;
+        }
       });
     }
 
@@ -97,10 +99,11 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
       setState(() {
         if (imageType == 0) {
           _isUploadingProfile = false;
-        } else if (imageType == 1)
+        } else if (imageType == 1) {
           _isUploadingHeader = false;
-        else
+        } else {
           _isUploadingBg = false;
+        }
       });
     }
   }
