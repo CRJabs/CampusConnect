@@ -27,7 +27,7 @@ class CampusConnectApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'CampusConnect',
+      title: 'UB CampusConnect',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primaryColor: const Color(0xFF002147),
